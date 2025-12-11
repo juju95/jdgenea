@@ -10,6 +10,18 @@ export function AncestorWheelPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const sortedPersons = useMemo(() => {
+     return [...persons].sort((a, b) => {
+         const la = (a.lastName || '').toLowerCase()
+         const lb = (b.lastName || '').toLowerCase()
+         if (la !== lb) return la.localeCompare(lb)
+         
+         const fa = (a.firstName || '').toLowerCase()
+         const fb = (b.firstName || '').toLowerCase()
+         return fa.localeCompare(fb)
+     })
+   }, [persons])
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -46,31 +58,42 @@ export function AncestorWheelPage() {
     return d
   }, [root, persons])
 
-  if (loading) return <div className="p-4">Chargement…</div>
-  if (error) return <div className="p-4 text-red-600">{error}</div>
-  if (!root) return <div className="p-4">Aucune personne</div>
+  if (loading) return <div className="p-8 flex justify-center"><span className="loading loading-spinner loading-lg"></span></div>
+  if (error) return (
+    <div role="alert" className="alert alert-error m-4">
+      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>{error}</span>
+    </div>
+  )
+  if (!root) return <div className="p-8 text-center text-base-content/70">Aucune personne trouvée</div>
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <label className="text-sm">Personne racine</label>
-          <select className="border rounded px-2 py-1" value={root.id} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
-            {persons.map(p => (
-              <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm">Générations</label>
-          <select className="border rounded px-2 py-1" value={depth} onChange={e => setDepth(parseInt(e.target.value))}>
-            {Array.from({length: maxDepth}, (_,i)=>i+1).map(n => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
+    <div className="p-4 space-y-4">
+      <div className="card bg-base-100 shadow-sm border border-base-200">
+        <div className="card-body py-4 flex-row items-center gap-6">
+            <div className="form-control w-full max-w-xs">
+              <label className="label">
+                <span className="label-text">Personne racine</span>
+              </label>
+              <select className="select select-bordered select-sm" value={root.id} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
+                {sortedPersons.map(p => (
+                  <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-control w-full max-w-xs">
+              <label className="label">
+                <span className="label-text">Générations</span>
+              </label>
+              <select className="select select-bordered select-sm" value={depth} onChange={e => setDepth(parseInt(e.target.value))}>
+                {Array.from({length: maxDepth}, (_,i)=>i+1).map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
         </div>
       </div>
-      <div className="w-full h-[720px] border rounded bg-slate-50">
+      <div className="w-full h-[720px] border border-base-200 rounded-box bg-base-100 shadow-xl overflow-hidden relative">
         <AncestorWheel root={root} persons={persons} depth={depth} />
       </div>
     </div>

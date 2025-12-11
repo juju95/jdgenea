@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { MapPin, Search, Loader2 } from 'lucide-react'
 import { api } from '../api/client'
 
@@ -83,81 +84,90 @@ export function LocationInput({ value, onChange, placeholder, className }: Props
 
   return (
     <>
-      <div className="relative">
+      <div className="relative w-full">
         <input 
-            className={className}
+            className={`input input-bordered w-full pr-10 ${className || ''}`}
             value={value || ''}
             placeholder={placeholder}
             onClick={() => setIsOpen(true)}
-            readOnly // Prevent direct typing, force modal? Or allow typing but show modal on focus?
-            // User said: "quand j'entre dans un champ ... ca ouvre une modale"
-            // So readOnly + onClick seems safest to enforce the flow, or allow typing and open modal?
-            // "saisie d'adresse... modale" implies the modal handles the input.
+            readOnly 
         />
-        <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 pointer-events-none" />
       </div>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-4 border-b border-slate-100 flex items-center gap-3">
-                <Search className="text-slate-400" />
+      {isOpen && createPortal(
+        <div className="modal modal-open" style={{ zIndex: 9999 }}>
+          <div ref={modalRef} className="modal-box w-11/12 max-w-lg h-[80vh] flex flex-col p-0 overflow-hidden">
+            <div className="p-4 border-b border-base-200 flex items-center gap-3 bg-base-100">
+                <Search className="text-base-content/50" />
                 <input 
                     id="location-search-input"
-                    className="flex-1 outline-none text-lg"
+                    className="flex-1 input input-ghost focus:outline-none text-lg"
                     placeholder="Rechercher un lieu..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
-                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">Fermer</button>
+                <button onClick={() => setIsOpen(false)} className="btn btn-sm btn-circle btn-ghost">✕</button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-2 bg-base-100">
                 {/* Local Results */}
                 {localResults.length > 0 && (
                     <div className="mb-4">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase px-3 py-2">Déjà utilisés</h4>
-                        {localResults.map((place, i) => (
-                            <button key={i} className="w-full text-left px-3 py-2 hover:bg-indigo-50 rounded text-slate-700" onClick={() => handleSelect(place)}>
-                                {place}
-                            </button>
-                        ))}
+                        <h4 className="text-xs font-bold text-base-content/50 uppercase px-3 py-2">Déjà utilisés</h4>
+                        <ul className="menu bg-base-100 w-full p-0">
+                            {localResults.map((place, i) => (
+                                <li key={i} className="w-full">
+                                    <button className="flex flex-col items-start gap-0 h-auto py-2 w-full max-w-full" onClick={() => handleSelect(place)}>
+                                        <span className="font-medium whitespace-normal text-left break-words w-full">{place}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
 
                 {/* External Results */}
                 {externalResults.length > 0 && (
                     <div className="mb-4">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase px-3 py-2">Suggestions (Internet)</h4>
-                        {externalResults.map((item, i) => {
-                            const label = formatExternal(item)
-                            return (
-                                <button key={i} className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded text-slate-700 flex flex-col" onClick={() => handleSelect(label, item.lat, item.lon)}>
-                                    <span className="font-medium">{label}</span>
-                                    <span className="text-xs text-slate-400 truncate">{item.display_name}</span>
-                                </button>
-                            )
-                        })}
+                        <h4 className="text-xs font-bold text-base-content/50 uppercase px-3 py-2">Suggestions (Internet)</h4>
+                        <ul className="menu bg-base-100 w-full p-0">
+                            {externalResults.map((item, i) => {
+                                const label = formatExternal(item)
+                                return (
+                                    <li key={i} className="w-full">
+                                        <button className="flex flex-col items-start gap-0 h-auto py-2 w-full max-w-full" onClick={() => handleSelect(label, item.lat, item.lon)}>
+                                            <span className="font-medium whitespace-normal text-left break-words w-full">{label}</span>
+                                            <span className="text-xs text-base-content/60 w-full text-left whitespace-normal break-words">{item.display_name}</span>
+                                        </button>
+                                    </li>
+                                )
+                            })}
+                        </ul>
                     </div>
                 )}
 
                 {(loadingLocal || loadingExternal) && (
                     <div className="flex justify-center p-4">
-                        <Loader2 className="animate-spin text-indigo-500" />
+                        <span className="loading loading-spinner loading-md text-primary"></span>
                     </div>
                 )}
                 
                 {!loadingLocal && !loadingExternal && search.length > 1 && localResults.length === 0 && externalResults.length === 0 && (
-                    <div className="text-center p-8 text-slate-400">
+                    <div className="text-center p-8 text-base-content/50">
                         Aucun résultat trouvé.
-                        <button className="block mx-auto mt-2 text-indigo-600 hover:underline" onClick={() => handleSelect(search)}>
+                        <button className="btn btn-link btn-sm mt-2 text-primary h-auto whitespace-normal break-words block w-full" onClick={() => handleSelect(search)}>
                             Utiliser "{search}" tel quel
                         </button>
                     </div>
                 )}
             </div>
           </div>
-        </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setIsOpen(false)}>close</button>
+          </form>
+        </div>,
+        document.body
       )}
     </>
   )

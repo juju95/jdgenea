@@ -31,6 +31,18 @@ export function TreeEditor() {
   const [families, setFamilies] = useState<Array<{id:string,treeId:string,husbandId?:string|null,wifeId?:string|null}>>([])
   const [nextGedcomId, setNextGedcomId] = useState<string>('')
 
+  const sortedPersons = useMemo(() => {
+      return [...persons].sort((a, b) => {
+          const la = (a.lastName || '').toLowerCase()
+          const lb = (b.lastName || '').toLowerCase()
+          if (la !== lb) return la.localeCompare(lb)
+          
+          const fa = (a.firstName || '').toLowerCase()
+          const fb = (b.firstName || '').toLowerCase()
+          return fa.localeCompare(fb)
+      })
+  }, [persons])
+
   useEffect(()=>{ (async()=>{ try { if (id) { const t = await api<{id:string,name:string,description?:string, rootPersonId?: string, livingThreshold?: number}>(`/trees/${id}`); setTree(t) } } catch(e){ if(e instanceof Error) setError(e.message) } })() },[id])
   useEffect(()=>{ (async()=>{ try { if (id) { const list = await api<Person[]>(`/persons?treeId=${id}`); setPersons(list); const fam = await api<Array<{id:string,treeId:string,husbandId?:string|null,wifeId?:string|null}>>(`/families?treeId=${id}`); setFamilies(fam) } } catch(e){ if(e instanceof Error) setError(e.message) } })() },[id])
 
@@ -308,62 +320,71 @@ export function TreeEditor() {
   }
 
   return (
-    <div className="grid gap-6">
-      {error && <div className="rounded bg-rose-100 text-rose-700 px-3 py-2">{error}</div>}
-      <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-emerald-50 border border-slate-200 p-6">
-        <h1 className="text-3xl font-semibold text-slate-800">{tree?.name ?? 'Éditeur d\'arbre'}</h1>
-        {tree?.description && <p className="mt-1 text-slate-600">{tree.description}</p>}
-      </div>
-      <div className="grid md:grid-cols-[1fr_320px] gap-6">
-        <div className="bg-white border border-slate-200 rounded-xl shadow min-h-[600px] overflow-hidden relative flex flex-col">
-            {/* View Selector */}
-            <div className="absolute top-4 left-4 z-10 flex bg-white rounded-lg shadow border border-slate-200 p-1 gap-1">
+    <div className="grid gap-6 h-[calc(100vh-8rem)]">
+      {error && (
+        <div role="alert" className="alert alert-error">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>{error}</span>
+        </div>
+      )}
+      
+      <div className="card bg-base-100 shadow-sm border border-base-200">
+        <div className="card-body py-4 flex-row items-center justify-between">
+            <div>
+                <h1 className="text-2xl font-bold text-primary">{tree?.name ?? 'Éditeur d\'arbre'}</h1>
+                {tree?.description && <p className="text-sm text-base-content/70">{tree.description}</p>}
+            </div>
+            <div className="join shadow-sm">
                 <button 
                     onClick={() => setViewMode('standard')}
-                    className={`p-2 rounded ${viewMode === 'standard' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}
+                    className={`btn btn-sm join-item ${viewMode === 'standard' ? 'btn-primary' : 'btn-ghost'}`}
                     title="Arbre Standard"
                 >
-                    <Layout size={20} />
+                    <Layout size={18} />
                 </button>
                 <button 
                     onClick={() => setViewMode('fan')}
-                    className={`p-2 rounded ${viewMode === 'fan' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}
+                    className={`btn btn-sm join-item ${viewMode === 'fan' ? 'btn-primary' : 'btn-ghost'}`}
                     title="Roue d'Ascendance"
                 >
-                    <Circle size={20} />
+                    <Circle size={18} />
                 </button>
                 <button 
                     onClick={() => setViewMode('wheel')}
-                    className={`p-2 rounded ${viewMode === 'wheel' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}
+                    className={`btn btn-sm join-item ${viewMode === 'wheel' ? 'btn-primary' : 'btn-ghost'}`}
                     title="Roue Familiale (Descendance)"
                 >
-                    <Users size={20} />
+                    <Users size={18} />
                 </button>
                 <button 
                     onClick={() => setViewMode('artistic')}
-                    className={`p-2 rounded ${viewMode === 'artistic' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}
+                    className={`btn btn-sm join-item ${viewMode === 'artistic' ? 'btn-primary' : 'btn-ghost'}`}
                     title="Arbre Artistique"
                 >
-                    <GitFork size={20} />
+                    <GitFork size={18} />
                 </button>
                 <button 
                     onClick={() => setViewMode('timeline')}
-                    className={`p-2 rounded ${viewMode === 'timeline' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}
+                    className={`btn btn-sm join-item ${viewMode === 'timeline' ? 'btn-primary' : 'btn-ghost'}`}
                     title="Frise Temporelle"
                 >
-                    <Clock size={20} />
+                    <Clock size={18} />
                 </button>
             </div>
+        </div>
+      </div>
 
-            {/* Controls overlay (Only for standard view or those needing zoom) */}
+      <div className="grid md:grid-cols-[1fr_320px] gap-6 h-full overflow-hidden">
+        <div className="card bg-base-100 shadow-xl border border-base-200 h-full relative flex flex-col overflow-hidden">
+            {/* Controls overlay */}
             {viewMode === 'standard' && (
-                <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                    <button className="bg-white border border-slate-200 shadow rounded p-2 hover:bg-slate-50" onClick={()=>setScale(s=> Math.min(2, s+0.1))}>Zoom +</button>
-                    <button className="bg-white border border-slate-200 shadow rounded p-2 hover:bg-slate-50" onClick={()=>setScale(s=> Math.max(0.5, s-0.1))}>Zoom −</button>
+                <div className="absolute top-4 right-4 z-10 join join-vertical shadow-sm">
+                    <button className="btn btn-sm btn-circle btn-ghost join-item bg-base-100" onClick={()=>setScale(s=> Math.min(2, s+0.1))}>+</button>
+                    <button className="btn btn-sm btn-circle btn-ghost join-item bg-base-100" onClick={()=>setScale(s=> Math.max(0.5, s-0.1))}>−</button>
                 </div>
             )}
             
-            <div className="w-full h-full flex-1 relative overflow-auto">
+            <div className="w-full h-full flex-1 relative overflow-auto bg-base-200/30">
                 {centerId ? (
                     <>
                         {viewMode === 'standard' && (
@@ -375,6 +396,7 @@ export function TreeEditor() {
                                 onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
                                 selectedId={selectedPersonId}
                                 scale={scale}
+                                livingThreshold={tree?.livingThreshold}
                             />
                         )}
                         {viewMode === 'fan' && (
@@ -430,39 +452,46 @@ export function TreeEditor() {
             </div>
         </div>
         
-        <div className="bg-white border border-slate-200 rounded-xl shadow p-6 h-fit">
-          <h2 className="text-lg font-semibold text-slate-800">Outils</h2>
-          <div className="mt-4 grid gap-3">
-            <div className="grid grid-cols-[1fr_auto] gap-3 items-center">
-              <select className="px-3 py-2 rounded border w-full" value={centerId || ''} onChange={e=> setCenterId(e.target.value)}>
-                <option value="">-- Personne centrale --</option>
-                {persons.map(p=> <option key={p.id} value={p.id}>{p.firstName} {p.lastName} {p.gedcomId ? `(GED ${p.gedcomId})` : ''}</option>)}
-              </select>
-            </div>
-            <button className="px-4 py-2 rounded bg-indigo-600 text-white" onClick={async()=>{ if (!id || !centerId) return; await api(`/trees/${id}`, { method:'PATCH', body: JSON.stringify({ rootPersonId: centerId }) }); }}>Définir comme racine</button>
-            <button className="px-4 py-2 rounded bg-indigo-600 text-white" onClick={openAddPersonModal}>Ajouter une personne</button>
-            <button className="px-4 py-2 rounded bg-slate-100 text-slate-700" onClick={()=> document.getElementById('add_event')?.showModal()}>Ajouter un événement</button>
-            <button className="px-4 py-2 rounded bg-slate-100 text-slate-700" onClick={() => setShowPdfModal(true)}>Exporter en PDF</button>
-            <button className="px-4 py-2 rounded bg-slate-100 text-slate-700" onClick={() => document.getElementById('tree_settings')?.showModal()}>Paramètres</button>
-            
-            <details className="rounded-xl border border-slate-200">
-              <summary className="px-4 py-2">Lier parenté</summary>
-              <div className="p-4 grid gap-2">
-                <select id="child" className="px-3 py-2 rounded border">{persons.map(p=> <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select>
-                <select id="father" className="px-3 py-2 rounded border"><option value="">(Père optionnel)</option>{persons.map(p=> <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select>
-                <select id="mother" className="px-3 py-2 rounded border"><option value="">(Mère optionnel)</option>{persons.map(p=> <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select>
-                <button className="px-4 py-2 rounded bg-emerald-500 text-white" onClick={async()=>{ const child=(document.getElementById('child') as HTMLSelectElement).value; const father=(document.getElementById('father') as HTMLSelectElement).value || null; const mother=(document.getElementById('mother') as HTMLSelectElement).value || null; await api(`/persons/${child}`, { method:'PATCH', body: JSON.stringify({ fatherId: father, motherId: mother }) }); setPersons(prev=> prev.map(p=> p.id===child ? { ...p, fatherId: father, motherId: mother } : p)) }}>Enregistrer</button>
+        <div className="card bg-base-100 shadow-xl border border-base-200 h-fit">
+          <div className="card-body">
+            <h2 className="card-title text-lg font-bold text-base-content">Outils</h2>
+            <div className="mt-4 grid gap-3">
+              <div className="form-control w-full">
+                <select className="select select-bordered select-sm w-full" value={centerId || ''} onChange={e=> setCenterId(e.target.value)}>
+                  <option value="">-- Personne centrale --</option>
+                  {sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName} {p.gedcomId ? `(GED ${p.gedcomId})` : ''}</option>)}
+                </select>
               </div>
-            </details>
-            
-            {id && <a className="px-4 py-2 rounded bg-slate-100 text-slate-700 text-center" href={`/api/gedcom/export/${id}`} target="_blank">Exporter GEDCOM</a>}
+              <button className="btn btn-sm btn-primary w-full text-white" onClick={async()=>{ if (!id || !centerId) return; await api(`/trees/${id}`, { method:'PATCH', body: JSON.stringify({ rootPersonId: centerId }) }); }}>Définir comme racine</button>
+              <button className="btn btn-sm btn-outline btn-primary w-full" onClick={openAddPersonModal}>Ajouter une personne</button>
+              <button className="btn btn-sm btn-ghost w-full border border-base-300" onClick={()=> document.getElementById('add_event')?.showModal()}>Ajouter un événement</button>
+              <button className="btn btn-sm btn-ghost w-full border border-base-300" onClick={() => setShowPdfModal(true)}>Exporter en PDF</button>
+              <button className="btn btn-sm btn-ghost w-full border border-base-300" onClick={() => document.getElementById('tree_settings')?.showModal()}>Paramètres</button>
+              
+              <div className="collapse collapse-arrow border border-base-200 bg-base-100 rounded-box">
+                <input type="checkbox" /> 
+                <div className="collapse-title font-medium">
+                  Lier parenté
+                </div>
+                <div className="collapse-content">
+                  <div className="grid gap-2 pt-2">
+                    <select id="child" className="select select-bordered select-xs w-full">{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
+                    <select id="father" className="select select-bordered select-xs w-full"><option value="">(Père optionnel)</option>{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
+                    <select id="mother" className="select select-bordered select-xs w-full"><option value="">(Mère optionnel)</option>{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
+                    <button className="btn btn-xs btn-success text-white w-full" onClick={async()=>{ const child=(document.getElementById('child') as HTMLSelectElement).value; const father=(document.getElementById('father') as HTMLSelectElement).value || null; const mother=(document.getElementById('mother') as HTMLSelectElement).value || null; await api(`/persons/${child}`, { method:'PATCH', body: JSON.stringify({ fatherId: father, motherId: mother }) }); setPersons(prev=> prev.map(p=> p.id===child ? { ...p, fatherId: father, motherId: mother } : p)) }}>Enregistrer</button>
+                  </div>
+                </div>
+              </div>
+              
+              {id && <a className="btn btn-sm btn-neutral w-full" href={`/api/gedcom/export/${id}`} target="_blank">Exporter GEDCOM</a>}
+            </div>
           </div>
         </div>
       </div>
 
-      <dialog id="tree_settings" className="rounded-xl">
-        <div className="bg-white rounded-xl border border-slate-200 shadow p-6 w-[400px]">
-          <h3 className="text-lg font-semibold text-slate-800">Paramètres de l'arbre</h3>
+      <dialog id="tree_settings" className="modal">
+        <div className="modal-box w-11/12 max-w-lg overflow-x-hidden">
+          <h3 className="font-bold text-lg">Paramètres de l'arbre</h3>
           <form className="mt-4 grid gap-3" onSubmit={async (e) => {
             e.preventDefault()
             if (!tree) return
@@ -472,33 +501,40 @@ export function TreeEditor() {
             setTree({ ...tree, livingThreshold: val })
             ;(document.getElementById('tree_settings') as HTMLDialogElement).close()
           }}>
-             <div className="space-y-1">
-               <label className="text-sm font-medium text-slate-700">Seuil de vie (années)</label>
-               <p className="text-xs text-slate-500">Âge au-delà duquel une personne sans date de décès est considérée comme décédée.</p>
+             <div className="form-control">
+               <label className="label">
+                 <span className="label-text">Seuil de vie (années)</span>
+               </label>
                <input 
                  id="livingThreshold" 
                  type="number" 
                  min="1" 
                  max="200"
                  defaultValue={tree?.livingThreshold ?? 100}
-                 className="w-full px-3 py-2 border rounded-md" 
+                 className="input input-bordered w-full" 
                />
+               <label className="label max-w-full">
+                 <span className="label-text-alt text-base-content/60 whitespace-normal break-words">Âge au-delà duquel une personne sans date de décès est considérée comme décédée.</span>
+               </label>
              </div>
-             <div className="flex justify-end gap-2 mt-2">
-               <button type="button" className="px-4 py-2 rounded bg-slate-100 text-slate-700" onClick={() => (document.getElementById('tree_settings') as HTMLDialogElement).close()}>Annuler</button>
-               <button type="submit" className="px-4 py-2 rounded bg-indigo-600 text-white">Enregistrer</button>
+             <div className="modal-action">
+               <button type="button" className="btn btn-ghost" onClick={() => (document.getElementById('tree_settings') as HTMLDialogElement).close()}>Annuler</button>
+               <button type="submit" className="btn btn-primary">Enregistrer</button>
              </div>
           </form>
         </div>
+        <form method="dialog" className="modal-backdrop">
+            <button>close</button>
+        </form>
       </dialog>
 
-      <dialog id="add_person" className="rounded-xl">
-        <div className="bg-white rounded-xl border border-slate-200 shadow p-6 w-[1024px] max-w-[95vw]">
-          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+      <dialog id="add_person" className="modal">
+        <div className="modal-box w-11/12 max-w-5xl overflow-x-hidden">
+          <h3 className="font-bold text-lg flex items-center gap-2">
             Nouvelle personne
-            {nextGedcomId && <span className="text-xs font-mono font-normal bg-slate-100 px-2 py-0.5 rounded text-slate-500 border border-slate-200">{nextGedcomId}</span>}
+            {nextGedcomId && <div className="badge badge-neutral font-mono">{nextGedcomId}</div>}
           </h3>
-          <form className="mt-4 grid grid-cols-2 gap-3" onSubmit={async (e)=>{ 
+          <form className="mt-4 grid grid-cols-2 gap-4" onSubmit={async (e)=>{ 
             e.preventDefault(); 
             if (!id) return; 
             
@@ -538,84 +574,198 @@ export function TreeEditor() {
             }
             setPersons(prev=>[...prev, created]); setNewPerson({ firstName:'', lastName:'', gender:'M' }); setNewEvents([]); (document.getElementById('add_person') as HTMLDialogElement).close(); 
           }}>
-            <input className="px-3 py-2 rounded border" placeholder="Prénom" value={newPerson.firstName} onChange={e=>setNewPerson(v=>({ ...v, firstName: e.target.value }))} />
-            <input id="middleName" className="px-3 py-2 rounded border" placeholder="Second prénom" />
-            <input className="px-3 py-2 rounded border" placeholder="Nom" value={newPerson.lastName} onChange={e=>setNewPerson(v=>({ ...v, lastName: e.target.value }))} />
-            <input id="maidenName" className="px-3 py-2 rounded border" placeholder="Nom de naissance" />
-            <select className="px-3 py-2 rounded border" value={newPerson.gender} onChange={e=>setNewPerson(v=>({ ...v, gender: e.target.value }))}>
-              <option value="M">Homme</option>
-              <option value="F">Femme</option>
-            </select>
-            <input id="occupation" className="px-3 py-2 rounded border" placeholder="Profession" />
-            <label className="col-span-2 flex items-center gap-2"><input id="isLiving" type="checkbox" defaultChecked className="rounded" /> Vivant</label>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Prénom</span>
+              </label>
+              <input className="input input-bordered w-full" placeholder="Ex: Jean" value={newPerson.firstName} onChange={e=>setNewPerson(v=>({ ...v, firstName: e.target.value }))} />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Second prénom</span>
+              </label>
+              <input id="middleName" className="input input-bordered w-full" placeholder="Ex: Pierre" />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Nom</span>
+              </label>
+              <input className="input input-bordered w-full uppercase" placeholder="Ex: DUPONT" value={newPerson.lastName} onChange={e=>setNewPerson(v=>({ ...v, lastName: e.target.value }))} />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Nom de naissance</span>
+              </label>
+              <input id="maidenName" className="input input-bordered w-full uppercase" placeholder="Si différent" />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Sexe</span>
+              </label>
+              <select className="select select-bordered w-full" value={newPerson.gender} onChange={e=>setNewPerson(v=>({ ...v, gender: e.target.value }))}>
+                <option value="M">Homme</option>
+                <option value="F">Femme</option>
+              </select>
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Profession</span>
+              </label>
+              <input id="occupation" className="input input-bordered w-full" placeholder="Ex: Boulanger" />
+            </div>
             
-            <div className="col-span-2 mt-2">
-              <h4 className="text-md font-semibold text-slate-800 mb-2">Événements</h4>
+            <div className="form-control col-span-2">
+               <label className="label cursor-pointer justify-start gap-3">
+                 <input id="isLiving" type="checkbox" defaultChecked className="checkbox" /> 
+                 <span className="label-text">Personne vivante</span>
+               </label>
+            </div>
+            
+            <div className="col-span-2 mt-4">
+              <h4 className="text-md font-bold text-base-content mb-4 flex items-center gap-2">
+                Événements
+                <div className="badge badge-sm badge-ghost">{newEvents.length}</div>
+              </h4>
               <div className="grid gap-3">
                 {newEvents.map((ev, idx)=> (
-                  <div key={idx} className="grid grid-cols-6 gap-2 items-center border border-slate-200 rounded p-2">
-                    <select className="px-3 py-2 rounded border" value={ev.type} onChange={e=>{ const v=e.target.value; setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, type:v } : x)) }}>
-                      <option value="BIRTH">Naissance</option>
-                      <option value="BAPTISM">Baptême</option>
-                      <option value="MARRIAGE">Mariage</option>
-                      <option value="DEATH">Décès</option>
-                      <option value="OTHER">Autre</option>
-                    </select>
-                    <input type="date" className="px-3 py-2 rounded border" value={ev.date||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, date:e.target.value } : x)) } />
-                    <input type="time" className="px-3 py-2 rounded border" value={ev.time||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, time:e.target.value } : x)) } />
-                    <input className="px-3 py-2 rounded border" placeholder="Lieu" value={ev.place||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, place:e.target.value } : x)) } />
-                    <input className="px-3 py-2 rounded border" placeholder="Subdivision" value={ev.placeSubdivision||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, placeSubdivision:e.target.value } : x)) } />
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={!!ev.isPrivate} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, isPrivate: e.target.checked } : x)) } /> Privé</label>
-                      <button type="button" className="px-3 py-2 rounded bg-rose-500 text-white" onClick={()=> setNewEvents(list=> list.filter((_,i)=> i!==idx))}>Supprimer</button>
+                  <div key={idx} className="grid grid-cols-6 gap-3 items-end border border-base-200 rounded-lg p-4 bg-base-50/50">
+                    <div className="col-span-2 form-control">
+                        <label className="label"><span className="label-text-alt">Type</span></label>
+                        <select className="select select-bordered select-sm w-full" value={ev.type} onChange={e=>{ const v=e.target.value; setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, type:v } : x)) }}>
+                          <option value="BIRTH">Naissance</option>
+                          <option value="BAPTISM">Baptême</option>
+                          <option value="MARRIAGE">Mariage</option>
+                          <option value="DEATH">Décès</option>
+                          <option value="OTHER">Autre</option>
+                        </select>
                     </div>
-                    <div className="col-span-6">
-                      <input multiple type="file" className="px-3 py-2 rounded border w-full" onChange={e=>{ const files=Array.from(e.target.files||[]); setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, files } : x)) }} />
+                    <div className="form-control">
+                        <label className="label"><span className="label-text-alt">Date</span></label>
+                        <input type="date" className="input input-bordered input-sm w-full" value={ev.date||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, date:e.target.value } : x)) } />
                     </div>
-                    <textarea className="col-span-6 px-3 py-2 rounded border" placeholder="Description / Cause" value={ev.description||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, description:e.target.value } : x)) } />
+                    <div className="form-control">
+                        <label className="label"><span className="label-text-alt">Heure</span></label>
+                        <input type="time" className="input input-bordered input-sm w-full" value={ev.time||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, time:e.target.value } : x)) } />
+                    </div>
+                    <div className="col-span-2 form-control">
+                        <label className="label"><span className="label-text-alt">Lieu</span></label>
+                        <input className="input input-bordered input-sm w-full" placeholder="Lieu" value={ev.place||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, place:e.target.value } : x)) } />
+                    </div>
+                    
+                    <div className="col-span-2 form-control">
+                        <label className="label"><span className="label-text-alt">Subdivision</span></label>
+                        <input className="input input-bordered input-sm w-full" placeholder="Subdivision" value={ev.placeSubdivision||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, placeSubdivision:e.target.value } : x)) } />
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2 pb-1">
+                      <label className="label cursor-pointer gap-2"><input type="checkbox" className="checkbox checkbox-sm" checked={!!ev.isPrivate} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, isPrivate: e.target.checked } : x)) } /><span className="label-text">Privé</span></label>
+                    </div>
+                    <div className="col-span-2 pb-1 flex justify-end">
+                      <button type="button" className="btn btn-sm btn-error btn-ghost text-error" onClick={()=> setNewEvents(list=> list.filter((_,i)=> i!==idx))}>Supprimer</button>
+                    </div>
+                    
+                    <div className="col-span-3 form-control">
+                      <input multiple type="file" className="file-input file-input-bordered file-input-sm w-full" onChange={e=>{ const files=Array.from(e.target.files||[]); setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, files } : x)) }} />
+                    </div>
+                    <div className="col-span-3 form-control">
+                        <textarea className="textarea textarea-bordered textarea-sm w-full h-10 min-h-[2.5rem]" placeholder="Description / Cause" value={ev.description||''} onChange={e=> setNewEvents(list=> list.map((x,i)=> i===idx? { ...x, description:e.target.value } : x)) } />
+                    </div>
                   </div>
                 ))}
-                <button type="button" className="px-4 py-2 rounded bg-slate-100 text-slate-700" onClick={()=> setNewEvents(list=> [...list, { type:'BIRTH' }])}>Ajouter un événement</button>
+                <button type="button" className="btn btn-sm btn-outline btn-primary border-dashed" onClick={()=> setNewEvents(list=> [...list, { type:'BIRTH' }])}>
+                    + Ajouter un événement
+                </button>
               </div>
             </div>
-            <div className="col-span-2 mt-4">
-              <h4 className="text-md font-semibold text-slate-800 mb-2">Notes & Biographie</h4>
-              <textarea id="notes" className="col-span-2 px-3 py-2 rounded border w-full" placeholder="Notes"></textarea>
-              <textarea id="biography" className="col-span-2 px-3 py-2 rounded border w-full mt-2" placeholder="Biographie"></textarea>
+            <div className="col-span-2 mt-4 grid gap-4">
+              <h4 className="text-md font-bold text-base-content">Notes & Biographie</h4>
+              <div className="form-control">
+                  <label className="label"><span className="label-text">Notes</span></label>
+                  <textarea id="notes" className="textarea textarea-bordered w-full h-24" placeholder="Notes privées..."></textarea>
+              </div>
+              <div className="form-control">
+                  <label className="label"><span className="label-text">Biographie</span></label>
+                  <textarea id="biography" className="textarea textarea-bordered w-full h-32" placeholder="Biographie publique..."></textarea>
+              </div>
             </div>
 
-            <div className="col-span-2 flex justify-end gap-2 mt-4">
-              <button type="button" className="px-4 py-2 rounded bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={()=> (document.getElementById('add_person') as HTMLDialogElement).close()}>Annuler</button>
-              <button type="submit" className="px-4 py-2 rounded bg-indigo-600 text-white">Enregistrer</button>
+            <div className="col-span-2 modal-action">
+              <button type="button" className="btn btn-ghost" onClick={()=> (document.getElementById('add_person') as HTMLDialogElement).close()}>Annuler</button>
+              <button type="submit" className="btn btn-primary">Enregistrer</button>
             </div>
           </form>
         </div>
+        <form method="dialog" className="modal-backdrop">
+            <button>close</button>
+        </form>
       </dialog>
 
-      <dialog id="add_event" className="rounded-xl">
-        <div className="bg-white rounded-xl border border-slate-200 shadow p-6 w-[720px] max-w-full">
-          <h3 className="text-lg font-semibold text-slate-800">Nouvel événement</h3>
+      <dialog id="add_event" className="modal">
+        <div className="modal-box w-11/12 max-w-3xl">
+          <h3 className="font-bold text-lg">Nouvel événement</h3>
           <form className="mt-4 grid grid-cols-2 gap-3" onSubmit={async (e)=>{ e.preventDefault(); const personSel=(document.getElementById('eventPerson') as HTMLSelectElement).value || persons[0]?.id; const type=(document.getElementById('eventType') as HTMLSelectElement).value; const date=(document.getElementById('eventDate') as HTMLInputElement).value; const time=(document.getElementById('eventTime') as HTMLInputElement).value; const place=(document.getElementById('eventPlace') as HTMLInputElement).value; const sub=(document.getElementById('eventPlaceSub') as HTMLInputElement).value; const desc=(document.getElementById('eventDesc') as HTMLTextAreaElement).value; const priv=(document.getElementById('eventPrivate') as HTMLInputElement).checked; await api('/persons/'+personSel+'/events'); await api<{id:string}>('/events', { method:'POST', body: JSON.stringify({ personId: personSel, type, date, time, place, placeSubdivision: sub, description: desc, isPrivate: priv }) }); (document.getElementById('add_event') as HTMLDialogElement).close(); }}>
-            <select id="eventPerson" className="px-3 py-2 rounded border">{persons.map(p=> <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select>
-            <select id="eventType" className="px-3 py-2 rounded border">
-              <option value="BIRTH">Naissance</option>
-              <option value="BAPTISM">Baptême</option>
-              <option value="MARRIAGE">Mariage</option>
-              <option value="DEATH">Décès</option>
-              <option value="OTHER">Autre</option>
-            </select>
-            <input id="eventDate" type="date" className="px-3 py-2 rounded border" />
-            <input id="eventTime" type="time" className="px-3 py-2 rounded border" />
-            <input id="eventPlace" className="px-3 py-2 rounded border" placeholder="Lieu" />
-            <input id="eventPlaceSub" className="px-3 py-2 rounded border" placeholder="Subdivision du lieu" />
-            <label className="flex items-center gap-2"><input id="eventPrivate" type="checkbox" className="rounded" /> Événement privé</label>
-            <textarea id="eventDesc" className="col-span-2 px-3 py-2 rounded border" placeholder="Description / Cause"></textarea>
-            <div className="col-span-2 flex justify-end gap-2 mt-2">
-              <button type="button" className="px-4 py-2 rounded bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={()=> (document.getElementById('add_event') as HTMLDialogElement).close()}>Annuler</button>
-              <button type="submit" className="px-4 py-2 rounded bg-emerald-500 text-white">Enregistrer</button>
+            <div className="col-span-2 form-control">
+              <label className="label">
+                <span className="label-text">Personne concernée</span>
+              </label>
+              <select id="eventPerson" className="select select-bordered w-full">{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Type d'événement</span>
+              </label>
+              <select id="eventType" className="select select-bordered w-full">
+                <option value="BIRTH">Naissance</option>
+                <option value="BAPTISM">Baptême</option>
+                <option value="MARRIAGE">Mariage</option>
+                <option value="DEATH">Décès</option>
+                <option value="OTHER">Autre</option>
+              </select>
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Date</span>
+              </label>
+              <input id="eventDate" type="date" className="input input-bordered w-full" />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Heure</span>
+              </label>
+              <input id="eventTime" type="time" className="input input-bordered w-full" />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Lieu</span>
+              </label>
+              <input id="eventPlace" className="input input-bordered w-full" placeholder="Ex: Paris" />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Subdivision</span>
+              </label>
+              <input id="eventPlaceSub" className="input input-bordered w-full" placeholder="Ex: Hôpital Saint-Louis" />
+            </div>
+            <div className="form-control">
+               <label className="label cursor-pointer justify-start gap-3">
+                 <input id="eventPrivate" type="checkbox" className="checkbox" /> 
+                 <span className="label-text">Événement privé</span>
+               </label>
+            </div>
+            <div className="col-span-2 form-control">
+              <label className="label">
+                <span className="label-text">Description / Cause</span>
+              </label>
+              <textarea id="eventDesc" className="textarea textarea-bordered w-full" placeholder="Détails supplémentaires..."></textarea>
+            </div>
+            <div className="col-span-2 modal-action">
+              <button type="button" className="btn btn-ghost" onClick={()=> (document.getElementById('add_event') as HTMLDialogElement).close()}>Annuler</button>
+              <button type="submit" className="btn btn-primary">Enregistrer</button>
             </div>
           </form>
         </div>
+        <form method="dialog" className="modal-backdrop">
+            <button>close</button>
+        </form>
       </dialog>
 
       <PersonEditor 

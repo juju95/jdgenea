@@ -25,7 +25,9 @@ class PersonController
     public function list(): JsonResponse
     {
         $treeId = $_GET['treeId'] ?? null;
-        $items = $treeId ? $this->persons->findBy(['treeId' => $treeId]) : $this->persons->findAll();
+        $items = $treeId 
+            ? $this->persons->findBy(['treeId' => $treeId], ['lastName' => 'ASC', 'firstName' => 'ASC']) 
+            : $this->persons->findBy([], ['lastName' => 'ASC', 'firstName' => 'ASC']);
         $out = array_map(fn(Person $p) => $this->serializePerson($p), $items);
         return new JsonResponse($out);
     }

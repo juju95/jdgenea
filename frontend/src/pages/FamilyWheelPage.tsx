@@ -10,6 +10,18 @@ export function FamilyWheelPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const sortedPersons = useMemo(() => {
+     return [...persons].sort((a, b) => {
+         const la = (a.lastName || '').toLowerCase()
+         const lb = (b.lastName || '').toLowerCase()
+         if (la !== lb) return la.localeCompare(lb)
+         
+         const fa = (a.firstName || '').toLowerCase()
+         const fb = (b.firstName || '').toLowerCase()
+         return fa.localeCompare(fb)
+     })
+   }, [persons])
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -63,7 +75,7 @@ export function FamilyWheelPage() {
       <div className="mb-4 flex items-center gap-2">
         <label className="text-sm">Personne racine</label>
         <select className="border rounded px-2 py-1" value={root.id} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
-          {persons.map(p => (
+          {sortedPersons.map(p => (
             <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>
           ))}
         </select>

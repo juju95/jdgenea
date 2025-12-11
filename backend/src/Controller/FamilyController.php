@@ -47,6 +47,30 @@ class FamilyController
         return new JsonResponse(['id' => self::get($f,'id')], 201);
     }
 
+    #[Route('/api/families/{id}', methods: ['PATCH'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function patch(string $id, Request $request): JsonResponse
+    {
+        $f = $this->families->find($id);
+        if (!$f) { return new JsonResponse(['error' => 'Famille introuvable'], 404); }
+        
+        $d = json_decode($request->getContent(), true) ?? [];
+        
+        foreach (['husbandId', 'wifeId', 'marriagePlace', 'marriageLatitude', 'marriageLongitude'] as $field) {
+            if (array_key_exists($field, $d)) {
+                self::set($f, $field, $d[$field]);
+            }
+        }
+        
+        if (array_key_exists('marriageDate', $d)) {
+            $date = $d['marriageDate'] ? new \DateTimeImmutable($d['marriageDate']) : null;
+            self::set($f, 'marriageDate', $date);
+        }
+
+        $this->em->flush();
+        return new JsonResponse(['status' => 'ok']);
+    }
+
     private static function get(object $o, string $p): mixed { $r=new \ReflectionProperty($o,$p); $r->setAccessible(true); return $r->getValue($o);}    
     private static function set(object $o, string $p, mixed $v): void { $r=new \ReflectionProperty($o,$p); $r->setAccessible(true); $r->setValue($o,$v);}   
     private static function uuid(): string { $d=random_bytes(16); $d[6]=chr(ord($d[6])&0x0f|0x40); $d[8]=chr(ord($d[8])&0x3f|0x80); $h=bin2hex($d); return sprintf('%s-%s-%s-%s-%s',substr($h,0,8),substr($h,8,4),substr($h,12,4),substr($h,16,4),substr($h,20)); }

@@ -50,7 +50,7 @@ export const AncestorFanChart: React.FC<ChartProps> = ({ persons, rootId, onSele
             .style("cursor", "pointer")
             .on("click", (e, d) => onSelect(d.data.id))
             .append("title")
-            .text(d => `${d.data.firstName} ${d.data.lastName}`)
+            .text(d => `${d.data.lastName} ${d.data.firstName}`)
 
         // Draw Labels
         g.selectAll("text")
@@ -63,7 +63,7 @@ export const AncestorFanChart: React.FC<ChartProps> = ({ persons, rootId, onSele
             })
             .attr("dy", "0.35em")
             .text(d => {
-                const name = `${d.data.firstName} ${d.data.lastName}`
+                const name = `${d.data.lastName} ${d.data.firstName}`
                 return name.length > 15 ? name.substring(0, 15) + '...' : name
             })
             .style("font-size", "10px")

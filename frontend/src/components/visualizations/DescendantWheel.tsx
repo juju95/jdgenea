@@ -49,7 +49,7 @@ export const DescendantWheel: React.FC<ChartProps> = ({ persons, rootId, onSelec
             .style("cursor", "pointer")
             .on("click", (e, d) => onSelect(d.data.id))
             .append("title")
-            .text(d => `${d.data.firstName} ${d.data.lastName}`)
+            .text(d => `${d.data.lastName} ${d.data.firstName}`)
 
         // Labels
         g.selectAll("text")

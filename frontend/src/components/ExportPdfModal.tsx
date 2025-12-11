@@ -15,22 +15,24 @@ export function ExportPdfModal({ isOpen, onClose, onExport, isProcessing }: Prop
   if (!isOpen) return null
 
   return (
-    <dialog open className="modal modal-open bg-black/50 fixed inset-0 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-96 max-w-full">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Exporter en PDF</h3>
+    <dialog className="modal modal-open">
+      <div className="modal-box overflow-x-hidden">
+        <h3 className="text-lg font-bold mb-4 whitespace-normal break-words">Exporter en PDF</h3>
         
         <div className="grid gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Format</label>
-            <div className="flex gap-2">
+            <label className="label">
+              <span className="label-text">Format</span>
+            </label>
+            <div className="join w-full">
               <button 
-                className={`flex-1 py-2 rounded border ${format === 'a4' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-slate-200'}`}
+                className={`join-item btn flex-1 ${format === 'a4' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setFormat('a4')}
               >
                 A4
               </button>
               <button 
-                className={`flex-1 py-2 rounded border ${format === 'a3' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-slate-200'}`}
+                className={`join-item btn flex-1 ${format === 'a3' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setFormat('a3')}
               >
                 A3
@@ -39,16 +41,18 @@ export function ExportPdfModal({ isOpen, onClose, onExport, isProcessing }: Prop
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Orientation</label>
-            <div className="flex gap-2">
+            <label className="label">
+              <span className="label-text">Orientation</span>
+            </label>
+            <div className="join w-full">
               <button 
-                className={`flex-1 py-2 rounded border ${orientation === 'portrait' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-slate-200'}`}
+                className={`join-item btn flex-1 ${orientation === 'portrait' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setOrientation('portrait')}
               >
                 Portrait
               </button>
               <button 
-                className={`flex-1 py-2 rounded border ${orientation === 'landscape' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-slate-200'}`}
+                className={`join-item btn flex-1 ${orientation === 'landscape' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setOrientation('landscape')}
               >
                 Paysage
@@ -56,10 +60,12 @@ export function ExportPdfModal({ isOpen, onClose, onExport, isProcessing }: Prop
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Échelle (Qualité)</label>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Échelle (Qualité)</span>
+            </label>
             <select 
-                className="w-full px-3 py-2 rounded border border-slate-200"
+                className="select select-bordered w-full"
                 value={scale}
                 onChange={e => setScale(parseFloat(e.target.value))}
             >
@@ -68,29 +74,39 @@ export function ExportPdfModal({ isOpen, onClose, onExport, isProcessing }: Prop
                 <option value={1}>100% (Taille réelle)</option>
                 <option value={1.5}>150% (Haute qualité)</option>
             </select>
-            <p className="text-xs text-slate-500 mt-1">
+            <label className="label max-w-full">
+              <span className="label-text-alt text-base-content/70 whitespace-normal break-words">
                 Une échelle plus grande augmentera la lisibilité mais générera plus de pages.
-            </p>
+              </span>
+            </label>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="modal-action">
           <button 
-            className="px-4 py-2 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+            className="btn btn-ghost"
             onClick={onClose}
             disabled={isProcessing}
           >
             Annuler
           </button>
           <button 
-            className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            className="btn btn-primary"
             onClick={() => onExport({ format, orientation, scale })}
             disabled={isProcessing}
           >
-            {isProcessing ? 'Génération...' : 'Générer PDF'}
+            {isProcessing ? (
+              <>
+                <span className="loading loading-spinner"></span>
+                Génération...
+              </>
+            ) : 'Générer PDF'}
           </button>
         </div>
       </div>
+      <form method="dialog" className="modal-backdrop">
+        <button onClick={onClose}>close</button>
+      </form>
     </dialog>
   )
 }

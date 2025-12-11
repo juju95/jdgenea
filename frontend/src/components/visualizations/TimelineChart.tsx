@@ -62,7 +62,7 @@ export const TimelineChart: React.FC<ChartProps> = ({ persons, rootId, onSelect,
                             width: Math.max(2, (d.end - d.start) * pxPerYear),
                             opacity: 0.9
                         }}
-                        title={`${d.person.firstName} ${d.person.lastName} (${d.start} - ${d.end})`}
+                        title={`${d.person.lastName} ${d.person.firstName} (${d.start} - ${d.end})`}
                     >
                         {d.person.lastName} {d.person.firstName}
                     </div>

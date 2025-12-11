@@ -1,7 +1,9 @@
 import React, { memo, useMemo, useEffect, useRef, forwardRef } from 'react'
 import ReactFamilyTree from 'react-family-tree'
 import calcTree from 'relatives-tree'
+import { CheckCircle2, AlertCircle, XCircle, Image as ImageIcon } from 'lucide-react'
 import type { FamilyNode } from '../utils/familyTreeData'
+import { computeIsLiving } from '../utils/personUtils'
 
 const NODE_WIDTH = 240
 const NODE_HEIGHT = 100
@@ -11,9 +13,10 @@ interface Props {
   rootId: string
   onSelect: (id: string) => void
   scale?: number
+  livingThreshold?: number
 }
 
-export const FamilyTree = memo(forwardRef<HTMLDivElement, Props>(function FamilyTree({ nodes, rootId, onSelect, scale = 1 }, ref) {
+export const FamilyTree = memo(forwardRef<HTMLDivElement, Props>(function FamilyTree({ nodes, rootId, onSelect, scale = 1, livingThreshold = 100 }, ref) {
   const localRef = useRef<HTMLDivElement>(null)
   const containerRef = (ref as React.RefObject<HTMLDivElement>) || localRef
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -132,6 +135,7 @@ export const FamilyTree = memo(forwardRef<HTMLDivElement, Props>(function Family
                     node={node}
                     onSelect={handleNodeClick}
                     isRoot={node.id === rootId}
+                    livingThreshold={livingThreshold}
                     style={{
                         width: NODE_WIDTH,
                         height: NODE_HEIGHT,
@@ -152,8 +156,26 @@ interface ExtNode extends FamilyNode {
   hasSubTree: boolean
 }
 
-const FamilyNodeComponent = ({ node, onSelect, isRoot, style }: { node: ExtNode, onSelect: (id:string)=>void, isRoot: boolean, style: React.CSSProperties }) => {
+const FamilyNodeComponent = ({ node, onSelect, isRoot, style, livingThreshold }: { node: ExtNode, onSelect: (id:string)=>void, isRoot: boolean, style: React.CSSProperties, livingThreshold: number }) => {
   const { data } = node
+  
+  // Status logic
+  const hasBirth = !!(data.birthDate && data.birthPlace && data.birthPlace.trim())
+  const hasDeath = !!(data.deathDate && data.deathPlace && data.deathPlace.trim())
+  // Strict boolean check to avoid issues with truthy strings (e.g. "false") or numbers
+  const isLiving = computeIsLiving(data, livingThreshold)
+  
+  let StatusIcon = XCircle
+  let statusColor = "text-red-500"
+  
+  if (hasBirth && (isLiving || hasDeath)) {
+    StatusIcon = CheckCircle2
+    statusColor = "text-green-500"
+  } else if (hasBirth || hasDeath || data.birthDate || data.deathDate) {
+    StatusIcon = AlertCircle
+    statusColor = "text-orange-500"
+  }
+
   return (
     <div
       id={`node-${node.id}`}
@@ -169,8 +191,28 @@ const FamilyNodeComponent = ({ node, onSelect, isRoot, style }: { node: ExtNode,
         `}
         onClick={() => onSelect(node.id)}
       >
-        <div className="font-bold text-slate-800 truncate" title={`${data.firstName} ${data.lastName}`}>
-          {data.firstName} <span className="uppercase">{data.lastName}</span>
+        {/* Status Icon (Top Left) */}
+        <div className="absolute top-1 left-1" title={statusColor === "text-green-500" ? "Complet" : statusColor === "text-orange-500" ? "Partiel" : "Incomplet"}>
+          <StatusIcon size={14} className={statusColor} />
+        </div>
+
+        {/* Top Right: Media & Sosa */}
+        <div className="absolute top-0 right-0 flex items-start">
+          {data.mediaCount && data.mediaCount > 0 && (
+            <div className="mr-1 mt-1 text-slate-400" title={`${data.mediaCount} média(s)`}>
+              <ImageIcon size={14} />
+            </div>
+          )}
+          
+          {data.sosa && (
+            <div className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-tr-xl rounded-bl-lg border-b border-l border-amber-200" title={`Sosa: ${data.sosa}`}>
+              {data.sosa}
+            </div>
+          )}
+        </div>
+
+        <div className="font-bold text-slate-800 truncate" title={`${data.lastName} ${data.firstName}`}>
+          <span className="uppercase">{data.lastName}</span> {data.firstName}
         </div>
         <div className="text-xs text-slate-500 mt-1 flex gap-2">
           {data.birthDate && <span>° {new Date(data.birthDate).getFullYear()}</span>}

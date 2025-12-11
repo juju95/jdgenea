@@ -43,16 +43,17 @@ const StatusIcon = ({ status }: { status?: CompletionStatus }) => {
 }
 
 const ToggleSection = ({ title, icon, isOpen, onToggle, status, children }: { title: string, icon?: React.ReactNode, isOpen: boolean, onToggle: () => void, status?: CompletionStatus, children: React.ReactNode }) => (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
-        <button type="button" onClick={onToggle} className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <div className="flex items-center gap-2">
-                {isOpen ? <ChevronDown size={18} className="text-slate-500" /> : <ChevronRight size={18} className="text-slate-500" />}
-                {icon}
-                <span className="font-medium text-slate-700">{title}</span>
+    <div className={`collapse collapse-arrow border border-base-200 bg-base-100 rounded-box mb-2 ${isOpen ? 'collapse-open' : ''}`}>
+        <div className="collapse-title text-base font-medium flex items-center gap-2" onClick={onToggle}>
+            {icon}
+            <span className="flex-1">{title}</span>
+            <div onClick={e => e.stopPropagation()}>
+                <StatusIcon status={status} />
             </div>
-            <StatusIcon status={status} />
-        </button>
-        {isOpen && <div className="p-4 border-t border-slate-200 bg-white">{children}</div>}
+        </div>
+        <div className="collapse-content">
+            <div className="pt-2">{children}</div>
+        </div>
     </div>
 )
 
@@ -261,6 +262,22 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
             method: 'PATCH',
             body: JSON.stringify(formData)
           })
+
+          // Update Main Marriage
+          if (marriages.length > 0) {
+              const m = marriages[0]
+              if (m.id && !m.id.startsWith('temp-')) {
+                  await api(`/families/${m.id}`, {
+                      method: 'PATCH',
+                      body: JSON.stringify({
+                          marriageDate: m.date,
+                          marriagePlace: m.place,
+                          marriageLatitude: m.latitude,
+                          marriageLongitude: m.longitude
+                      })
+                  })
+              }
+          }
           
           if (person) {
             onUpdate({ ...person, ...formData } as Person)
@@ -453,7 +470,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     href={m.url.startsWith('http') ? m.url : `/api${m.url.replace('/api', '')}`} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="block relative aspect-square border rounded overflow-hidden hover:opacity-80 bg-slate-50 group"
+                    className="block relative aspect-square border border-base-200 rounded overflow-hidden hover:opacity-80 bg-base-200/50 group"
                     title={m.fileName}
                   >
                       {m.fileType.startsWith('image/') ? (
@@ -469,13 +486,13 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                                 }} 
                               />
                               {/* Fallback Icon (hidden by default, shown via CSS or JS logic above, but here we can just put it behind) */}
-                              <div className="hidden fallback-icon:flex absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-1">
+                              <div className="hidden fallback-icon:flex absolute inset-0 flex flex-col items-center justify-center text-base-content/40 p-1">
                                   <ImageIcon size={24} />
                                   <span className="text-[10px] text-center w-full truncate mt-1">{m.fileName}</span>
                               </div>
                           </div>
                       ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 p-2">
+                          <div className="w-full h-full flex flex-col items-center justify-center text-base-content/60 p-2">
                               <FileText size={24} className="mb-1" />
                               <span className="text-[10px] text-center w-full truncate leading-tight break-all">
                                   {m.fileName}
@@ -508,26 +525,26 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
   const mainMarriageStatus = mainMarriage ? getStatus(!!mainMarriage.date, !!mainMarriage.place) : undefined
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[500px] bg-white shadow-2xl border-l border-slate-200 transform transition-transform z-50 flex flex-col">
+    <div className="fixed inset-y-0 right-0 w-[500px] bg-base-100 shadow-2xl border-l border-base-200 transform transition-transform z-50 flex flex-col text-base-content">
       {/* Header */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+      <div className="p-4 border-b border-base-200 flex items-center justify-between bg-base-200/50">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-primary">
           <span>{loading ? 'Chargement...' : creationContext ? `Créer ${creationContext.type === 'father' ? 'Père' : creationContext.type === 'mother' ? 'Mère' : creationContext.type === 'child' ? 'Enfant' : 'Conjoint'}` : `Éditer ${person?.firstName} ${person?.lastName}`}</span>
           {person?.sosa && (
-             <span className="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200" title="Numéro Sosa">
+             <span className="badge badge-warning gap-1" title="Numéro Sosa">
                  {person.sosa}
              </span>
           )}
           {person?.gedcomId && !person?.sosa && (
-            <span className="text-xs font-mono font-normal bg-slate-100 px-2 py-0.5 rounded text-slate-500 border border-slate-200">
+            <span className="badge badge-ghost gap-1 font-mono text-xs">
                 {person.gedcomId}
             </span>
           )}
           {media.length > 0 && (
-              <Folder size={16} className="text-blue-500 ml-1" title={`${media.length} fichiers disponibles`} />
+              <Folder size={16} className="text-info ml-1" title={`${media.length} fichiers disponibles`} />
           )}
         </h2>
-        <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-500">
+        <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
           <X size={20} />
         </button>
       </div>
@@ -535,43 +552,51 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="flex justify-center py-10 text-slate-400">Chargement...</div>
+          <div className="flex justify-center py-10"><span className="loading loading-spinner loading-lg"></span></div>
         ) : error ? (
-          <div className="bg-rose-50 text-rose-600 p-4 rounded">{error}</div>
+          <div className="alert alert-error">{error}</div>
         ) : (
           <form id="edit-form" onSubmit={handleSubmit} className="space-y-4">
             
             {/* Identité */}
             <ToggleSection title="Identité" isOpen={sections.identity} onToggle={() => toggleSection('identity')} status={!!(formData.firstName && formData.lastName) ? 'complete' : 'partial'}>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Prénom</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Prénom</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="input input-bordered w-full"
                     value={formData.firstName || ''}
                     onChange={e => handleChange('firstName', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Nom</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Nom</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none uppercase"
+                    className="input input-bordered w-full uppercase"
                     value={formData.lastName || ''}
                     onChange={e => handleChange('lastName', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Autres prénoms</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Autres prénoms</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.middleName || ''}
                     onChange={e => handleChange('middleName', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Sexe</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Sexe</span>
+                  </label>
                   <select 
-                    className="w-full px-3 py-2 border rounded-md outline-none bg-white"
+                    className="select select-bordered w-full"
                     value={formData.gender || 'M'}
                     onChange={e => handleChange('gender', e.target.value)}
                   >
@@ -579,10 +604,12 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     <option value="F">Femme</option>
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Profession</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Profession</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.occupation || ''}
                     onChange={e => handleChange('occupation', e.target.value)}
                   />
@@ -600,29 +627,35 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                 status={birthStatus}
             >
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Date</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Date</span>
+                  </label>
                   <input 
                     type="date"
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.birthDate || ''}
                     onChange={e => handleChange('birthDate', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Heure</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Heure</span>
+                  </label>
                   <input 
                     type="time"
                     step="1"
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.birthTime || ''}
                     onChange={e => handleChange('birthTime', e.target.value)}
                   />
                 </div>
-                <div className="col-span-2 space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Lieu</label>
+                <div className="col-span-2 form-control">
+                  <label className="label">
+                    <span className="label-text">Lieu</span>
+                  </label>
                   <LocationInput 
-                    className="w-full px-3 py-2 border rounded-md outline-none cursor-pointer"
+                    className="cursor-pointer"
                     value={formData.birthPlace || ''}
                     onChange={(place, lat, lon) => {
                         setFormData(prev => ({
@@ -635,19 +668,23 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     placeholder="Ville, Code Postal, Pays"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Latitude</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Latitude</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.birthLatitude || ''}
                     onChange={e => handleChange('birthLatitude', e.target.value)}
                     placeholder="Ex: 48.8566"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Longitude</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Longitude</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.birthLongitude || ''}
                     onChange={e => handleChange('birthLongitude', e.target.value)}
                     placeholder="Ex: 2.3522"
@@ -666,29 +703,35 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                 status={baptismStatus}
             >
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Date</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Date</span>
+                  </label>
                   <input 
                     type="date"
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.baptismDate || ''}
                     onChange={e => handleChange('baptismDate', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Heure</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Heure</span>
+                  </label>
                   <input 
                     type="time"
                     step="1"
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.baptismTime || ''}
                     onChange={e => handleChange('baptismTime', e.target.value)}
                   />
                 </div>
-                <div className="col-span-2 space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Lieu</label>
+                <div className="col-span-2 form-control">
+                  <label className="label">
+                    <span className="label-text">Lieu</span>
+                  </label>
                   <LocationInput 
-                    className="w-full px-3 py-2 border rounded-md outline-none cursor-pointer"
+                    className="cursor-pointer"
                     value={formData.baptismPlace || ''}
                     onChange={(place, lat, lon) => {
                         setFormData(prev => ({
@@ -701,19 +744,23 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     placeholder="Ville, Code Postal, Pays"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Latitude</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Latitude</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.baptismLatitude || ''}
                     onChange={e => handleChange('baptismLatitude', e.target.value)}
                     placeholder="Ex: 48.8566"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Longitude</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Longitude</span>
+                  </label>
                   <input 
-                    className="w-full px-3 py-2 border rounded-md outline-none"
+                    className="input input-bordered w-full"
                     value={formData.baptismLongitude || ''}
                     onChange={e => handleChange('baptismLongitude', e.target.value)}
                     placeholder="Ex: 2.3522"
@@ -733,33 +780,40 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     status={mainMarriageStatus}
                  >
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500">Date</label>
-                            <input type="date" className="w-full px-3 py-2 border rounded-md outline-none" value={mainMarriage.date || ''} readOnly title="Édition du mariage à implémenter complètement" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500">Lieu</label>
-                            <LocationInput 
-                                className="w-full px-3 py-2 border rounded-md outline-none cursor-pointer"
-                                value={mainMarriage.place || ''}
-                                onChange={(place) => {
-                                    // Marriage update is complex as it's in a separate table/entity
-                                    // For now, let's just update the local state to show it works, 
-                                    // but saving requires updating the Family entity.
-                                    // The current 'handleSubmit' only patches Person.
-                                    // We need to implement family update or specific marriage update.
-                                    // But the user just asked for the input behavior.
-                                    // I'll update the local state 'marriages' array.
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Date</span>
+                            </label>
+                            <input 
+                                type="date" 
+                                className="input input-bordered w-full" 
+                                value={mainMarriage.date || ''} 
+                                onChange={(e) => {
                                     const newM = [...marriages]
-                                    if(newM[0]) newM[0] = { ...newM[0], place }
+                                    if(newM[0]) newM[0] = { ...newM[0], date: e.target.value }
                                     setMarriages(newM)
-                                    // TODO: Implement actual save for marriage place
+                                }}
+                            />
+                        </div>
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Lieu</span>
+                            </label>
+                            <LocationInput 
+                                className="cursor-pointer"
+                                value={mainMarriage.place || ''}
+                                onChange={(place, lat, lon) => {
+                                    const newM = [...marriages]
+                                    if(newM[0]) newM[0] = { 
+                                        ...newM[0], 
+                                        place,
+                                        latitude: lat,
+                                        longitude: lon
+                                    }
+                                    setMarriages(newM)
                                 }}
                                 placeholder="Ville, Code Postal, Pays"
                             />
-                        </div>
-                        <div className="col-span-2 text-xs text-slate-400 italic">
-                            * L'édition des détails du mariage sera disponible prochainement.
                         </div>
                     </div>
                     {renderMedia('MARRIAGE')}
@@ -774,43 +828,50 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                 onToggle={() => toggleSection('death')} 
                 status={deathStatus}
             >
-              <div className="flex items-center justify-between border-b pb-2 mb-4">
-                <span className="text-sm text-slate-600">Statut vital</span>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <div className="flex items-center justify-between border-b border-base-200 pb-2 mb-4">
+                <span className="text-sm font-medium">Statut vital</span>
+                <label className="label cursor-pointer gap-2">
+                  <span className="label-text">Personne vivante</span>
                   <input 
                     type="checkbox" 
+                    className="checkbox"
                     checked={formData.isLiving ?? true}
                     onChange={e => handleChange('isLiving', e.target.checked)}
                   />
-                  Personne vivante
                 </label>
               </div>
               
               {!formData.isLiving && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Date</label>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Date</span>
+                    </label>
                     <input 
                       type="date"
-                      className="w-full px-3 py-2 border rounded-md outline-none"
+                      className="input input-bordered w-full"
                       value={formData.deathDate || ''}
                       onChange={e => handleChange('deathDate', e.target.value)}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Heure</label>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Heure</span>
+                    </label>
                     <input 
                       type="time"
                       step="1"
-                      className="w-full px-3 py-2 border rounded-md outline-none"
+                      className="input input-bordered w-full"
                       value={formData.deathTime || ''}
                       onChange={e => handleChange('deathTime', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2 space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Lieu</label>
+                  <div className="col-span-2 form-control">
+                    <label className="label">
+                      <span className="label-text">Lieu</span>
+                    </label>
                     <LocationInput 
-                      className="w-full px-3 py-2 border rounded-md outline-none cursor-pointer"
+                      className="cursor-pointer"
                       value={formData.deathPlace || ''}
                       onChange={(place, lat, lon) => {
                           setFormData(prev => ({
@@ -823,18 +884,22 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                       placeholder="Ville, Code Postal, Pays"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Latitude</label>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Latitude</span>
+                    </label>
                     <input 
-                      className="w-full px-3 py-2 border rounded-md outline-none"
+                      className="input input-bordered w-full"
                       value={formData.deathLatitude || ''}
                       onChange={e => handleChange('deathLatitude', e.target.value)}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Longitude</label>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Longitude</span>
+                    </label>
                     <input 
-                      className="w-full px-3 py-2 border rounded-md outline-none"
+                      className="input input-bordered w-full"
                       value={formData.deathLongitude || ''}
                       onChange={e => handleChange('deathLongitude', e.target.value)}
                     />
@@ -848,34 +913,34 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
             <ToggleSection title="Famille & Relations" isOpen={sections.family} onToggle={() => toggleSection('family')}>
               {/* Parents */}
               <div className="mb-4">
-                <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Parents</h4>
+                <h4 className="text-xs font-bold opacity-50 uppercase mb-2">Parents</h4>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2">
-                    <span className="text-xs font-bold text-slate-400">PÈRE</span>
+                    <div className="p-3 border border-base-200 rounded-lg bg-base-200/30 flex flex-col gap-2">
+                    <span className="text-xs font-bold opacity-50">PÈRE</span>
                     {parents.father ? (
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{parents.father.firstName} {parents.father.lastName}</span>
-                            <button type="button" onClick={() => onSelect(parents.father.id)} className="p-1 hover:bg-slate-200 rounded text-indigo-600" title="Voir">
+                            <span className="text-sm font-medium">{parents.father.lastName} {parents.father.firstName}</span>
+                            <button type="button" onClick={() => onSelect(parents.father.id)} className="btn btn-ghost btn-xs text-primary" title="Voir">
                                 <Eye size={16} />
                             </button>
                         </div>
                     ) : (
-                        <button type="button" onClick={() => handleAddParent('father')} className="flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+                        <button type="button" onClick={() => handleAddParent('father')} className="btn btn-ghost btn-xs text-primary justify-start px-0">
                             <UserPlus size={16} /> Ajouter père
                         </button>
                     )}
                     </div>
-                    <div className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2">
-                    <span className="text-xs font-bold text-slate-400">MÈRE</span>
+                    <div className="p-3 border border-base-200 rounded-lg bg-base-200/30 flex flex-col gap-2">
+                    <span className="text-xs font-bold opacity-50">MÈRE</span>
                     {parents.mother ? (
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{parents.mother.firstName} {parents.mother.lastName}</span>
-                            <button type="button" onClick={() => onSelect(parents.mother.id)} className="p-1 hover:bg-slate-200 rounded text-indigo-600" title="Voir">
+                            <span className="text-sm font-medium">{parents.mother.lastName} {parents.mother.firstName}</span>
+                            <button type="button" onClick={() => onSelect(parents.mother.id)} className="btn btn-ghost btn-xs text-primary" title="Voir">
                                 <Eye size={16} />
                             </button>
                         </div>
                     ) : (
-                        <button type="button" onClick={() => handleAddParent('mother')} className="flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+                        <button type="button" onClick={() => handleAddParent('mother')} className="btn btn-ghost btn-xs text-primary justify-start px-0">
                             <UserPlus size={16} /> Ajouter mère
                         </button>
                     )}
@@ -886,75 +951,79 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                {/* Autres Mariages */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-500 uppercase">Tous les conjoints ({marriages.length})</span>
-                      <button type="button" onClick={handleAddSpouse} className="flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                      <span className="text-xs font-bold opacity-50 uppercase">Tous les conjoints ({marriages.length})</span>
+                      <button type="button" onClick={handleAddSpouse} className="btn btn-ghost btn-xs text-primary">
                           <Heart size={14} /> Ajouter
                       </button>
                   </div>
                   <div className="grid gap-2">
                      {marriages.map((m, idx) => (
-                         <div key={m.id || idx} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-slate-50">
+                         <div key={m.id || idx} className="flex items-center justify-between p-2 border border-base-200 rounded-lg bg-base-100 hover:bg-base-200/50 transition-colors">
                              <div className="flex flex-col">
                                  <span className="text-sm font-medium">
-                                     {m.spouse ? `${m.spouse.firstName} ${m.spouse.lastName}` : 'Conjoint inconnu'}
+                                     {m.spouse ? `${m.spouse.lastName} ${m.spouse.firstName}` : 'Conjoint inconnu'}
                                  </span>
-                                 <span className="text-[10px] text-slate-500">
+                                 <span className="text-[10px] opacity-60">
                                      {m.date ? `∞ ${m.date}` : ''} {m.place ? `à ${m.place}` : ''}
                                  </span>
                              </div>
                              {m.spouse && (
-                                 <button type="button" onClick={() => onSelect(m.spouse.id)} className="p-1 hover:bg-slate-200 rounded text-indigo-600" title="Voir">
+                                 <button type="button" onClick={() => onSelect(m.spouse.id)} className="btn btn-ghost btn-xs text-primary" title="Voir">
                                      <Eye size={16} />
                                  </button>
                              )}
                          </div>
                      ))}
-                     {marriages.length === 0 && <div className="text-sm text-slate-400 italic">Aucun mariage enregistré</div>}
+                     {marriages.length === 0 && <div className="text-sm opacity-50 italic">Aucun mariage enregistré</div>}
                   </div>
                 </div>
  
                 {/* Enfants */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-500 uppercase">Enfants ({children.length})</span>
-                      <button type="button" onClick={handleAddChild} className="flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                      <span className="text-xs font-bold opacity-50 uppercase">Enfants ({children.length})</span>
+                      <button type="button" onClick={handleAddChild} className="btn btn-ghost btn-xs text-primary">
                           <UserPlus size={14} /> Ajouter
                       </button>
                   </div>
                   <div className="grid gap-2">
                       {children.map(child => (
-                          <div key={child.id} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-slate-50">
+                          <div key={child.id} className="flex items-center justify-between p-2 border border-base-200 rounded-lg bg-base-100 hover:bg-base-200/50 transition-colors">
                               <div className="flex flex-col">
-                                  <span className="text-sm font-medium">{child.firstName} {child.lastName}</span>
-                                  <span className="text-[10px] text-slate-500">
+                                  <span className="text-sm font-medium">{child.lastName} {child.firstName}</span>
+                                  <span className="text-[10px] opacity-60">
                                       {child.birthDate ? `° ${child.birthDate}` : ''} {child.deathDate ? `† ${child.deathDate}` : ''}
                                   </span>
                               </div>
-                              <button type="button" onClick={() => onSelect(child.id)} className="p-1 hover:bg-slate-200 rounded text-indigo-600" title="Voir">
+                              <button type="button" onClick={() => onSelect(child.id)} className="btn btn-ghost btn-xs text-primary" title="Voir">
                                   <Eye size={16} />
                               </button>
                           </div>
                       ))}
-                      {children.length === 0 && <div className="text-sm text-slate-400 italic">Aucun enfant enregistré</div>}
+                      {children.length === 0 && <div className="text-sm opacity-50 italic">Aucun enfant enregistré</div>}
                   </div>
                 </div>
             </ToggleSection>
 
             {/* Notes & Bio */}
-            <ToggleSection title="Détails & Notes" isOpen={sections.details} onToggle={() => toggleSection('details')} isComplete={!!(formData.biography || formData.notes)}>
+            <ToggleSection title="Détails & Notes" isOpen={sections.details} onToggle={() => toggleSection('details')} status={!!(formData.biography || formData.notes) ? 'complete' : undefined}>
               <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Biographie</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Biographie</span>
+                  </label>
                   <textarea 
-                    className="w-full px-3 py-2 border rounded-md outline-none min-h-[100px]"
+                    className="textarea textarea-bordered h-24"
                     value={formData.biography || ''}
                     onChange={e => handleChange('biography', e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-500">Notes privées</label>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Notes privées</span>
+                  </label>
                   <textarea 
-                    className="w-full px-3 py-2 border rounded-md outline-none min-h-[80px]"
+                    className="textarea textarea-bordered h-24"
                     value={formData.notes || ''}
                     onChange={e => handleChange('notes', e.target.value)}
                   />
@@ -966,16 +1035,16 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+      <div className="p-4 border-t border-base-200 bg-base-200/30 flex justify-between items-center">
         {person && !parents.father && !parents.mother && (
             <button 
               type="button"
               onClick={handleDelete}
-              className="text-rose-600 hover:text-rose-700 p-2 rounded hover:bg-rose-50 flex items-center gap-1"
+              className="btn btn-error btn-ghost btn-sm gap-2"
               title="Supprimer"
             >
-              <Trash2 size={20} />
-              <span className="text-sm">Supprimer</span>
+              <Trash2 size={16} />
+              <span>Supprimer</span>
             </button>
         )}
         {!person && <div></div>} {/* Spacer */}
@@ -984,7 +1053,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
           <button 
             type="button" 
             onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:text-slate-800"
+            className="btn btn-ghost"
           >
             Annuler
           </button>
@@ -992,7 +1061,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
             type="submit" 
             form="edit-form"
             disabled={saving || loading}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            className="btn btn-primary"
           >
             <Save size={18} />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
