@@ -68,20 +68,34 @@ export function FamilyWheelPage() {
 
   if (loading) return <div className="p-4">Chargement…</div>
   if (error) return <div className="p-4 text-red-600">{error}</div>
-  if (!root) return <div className="p-4">Aucune personne</div>
+  if (persons.length === 0) return <div className="p-4">Aucune personne dans l'arbre</div>
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center gap-2">
-        <label className="text-sm">Personne racine</label>
-        <select className="border rounded px-2 py-1" value={root.id} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
-          {sortedPersons.map(p => (
-            <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>
-          ))}
-        </select>
+    <div className="p-4 space-y-4">
+      <div className="card bg-base-100 shadow-sm border border-base-200">
+        <div className="card-body py-4 flex-row items-center gap-6">
+          <div className="form-control w-full max-w-xs">
+            <label className="label">
+              <span className="label-text">Personne centrale (Vue)</span>
+            </label>
+            <select className="select select-bordered select-sm" value={root?.id || ''} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
+              <option value="">-- Sélectionner --</option>
+              {sortedPersons.map(p => (
+                <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
-      <div className="w-full h-[720px] border rounded bg-slate-50">
-        <FamilyWheel root={root} parents={parents} spouses={spouses} siblings={siblings} children={children} />
+      
+      <div className="w-full h-[720px] border border-base-200 rounded-box bg-slate-50 shadow-xl overflow-hidden relative">
+        {root ? (
+          <FamilyWheel root={root} parents={parents} spouses={spouses} siblings={siblings} children={children} />
+        ) : (
+          <div className="flex items-center justify-center h-full text-base-content/50">
+            Veuillez sélectionner une personne pour afficher la roue familiale
+          </div>
+        )}
       </div>
     </div>
   )

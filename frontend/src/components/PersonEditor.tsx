@@ -529,7 +529,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
       {/* Header */}
       <div className="p-4 border-b border-base-200 flex items-center justify-between bg-base-200/50">
         <h2 className="text-lg font-bold flex items-center gap-2 text-primary">
-          <span>{loading ? 'Chargement...' : creationContext ? `Créer ${creationContext.type === 'father' ? 'Père' : creationContext.type === 'mother' ? 'Mère' : creationContext.type === 'child' ? 'Enfant' : 'Conjoint'}` : `Éditer ${person?.firstName} ${person?.lastName}`}</span>
+          <span>{loading ? 'Chargement...' : creationContext ? `Créer ${creationContext.type === 'father' ? 'Père' : creationContext.type === 'mother' ? 'Mère' : creationContext.type === 'child' ? 'Enfant' : 'Conjoint'}` : `Éditer ${person?.lastName} ${person?.firstName}`}</span>
           {person?.sosa && (
              <span className="badge badge-warning gap-1" title="Numéro Sosa">
                  {person.sosa}
@@ -919,7 +919,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     <span className="text-xs font-bold opacity-50">PÈRE</span>
                     {parents.father ? (
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{parents.father.lastName} {parents.father.firstName}</span>
+                            <span className="text-sm font-medium"><span className="uppercase">{parents.father.lastName}</span> {parents.father.firstName}</span>
                             <button type="button" onClick={() => onSelect(parents.father.id)} className="btn btn-ghost btn-xs text-primary" title="Voir">
                                 <Eye size={16} />
                             </button>
@@ -934,7 +934,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     <span className="text-xs font-bold opacity-50">MÈRE</span>
                     {parents.mother ? (
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{parents.mother.lastName} {parents.mother.firstName}</span>
+                            <span className="text-sm font-medium"><span className="uppercase">{parents.mother.lastName}</span> {parents.mother.firstName}</span>
                             <button type="button" onClick={() => onSelect(parents.mother.id)} className="btn btn-ghost btn-xs text-primary" title="Voir">
                                 <Eye size={16} />
                             </button>
@@ -961,7 +961,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                          <div key={m.id || idx} className="flex items-center justify-between p-2 border border-base-200 rounded-lg bg-base-100 hover:bg-base-200/50 transition-colors">
                              <div className="flex flex-col">
                                  <span className="text-sm font-medium">
-                                     {m.spouse ? `${m.spouse.lastName} ${m.spouse.firstName}` : 'Conjoint inconnu'}
+                                     {m.spouse ? <><span className="uppercase">{m.spouse.lastName}</span> {m.spouse.firstName}</> : 'Conjoint inconnu'}
                                  </span>
                                  <span className="text-[10px] opacity-60">
                                      {m.date ? `∞ ${m.date}` : ''} {m.place ? `à ${m.place}` : ''}
@@ -990,7 +990,7 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                       {children.map(child => (
                           <div key={child.id} className="flex items-center justify-between p-2 border border-base-200 rounded-lg bg-base-100 hover:bg-base-200/50 transition-colors">
                               <div className="flex flex-col">
-                                  <span className="text-sm font-medium">{child.lastName} {child.firstName}</span>
+                                  <span className="text-sm font-medium"><span className="uppercase">{child.lastName}</span> {child.firstName}</span>
                                   <span className="text-[10px] opacity-60">
                                       {child.birthDate ? `° ${child.birthDate}` : ''} {child.deathDate ? `† ${child.deathDate}` : ''}
                                   </span>

@@ -65,7 +65,7 @@ export function AncestorWheelPage() {
       <span>{error}</span>
     </div>
   )
-  if (!root) return <div className="p-8 text-center text-base-content/70">Aucune personne trouvée</div>
+  if (persons.length === 0) return <div className="p-8 text-center text-base-content/70">Aucune personne trouvée</div>
 
   return (
     <div className="p-4 space-y-4">
@@ -73,11 +73,12 @@ export function AncestorWheelPage() {
         <div className="card-body py-4 flex-row items-center gap-6">
             <div className="form-control w-full max-w-xs">
               <label className="label">
-                <span className="label-text">Personne racine</span>
+                <span className="label-text">Personne centrale (Vue)</span>
               </label>
-              <select className="select select-bordered select-sm" value={root.id} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
+              <select className="select select-bordered select-sm" value={root?.id || ''} onChange={e => setRoot(persons.find(p => p.id === e.target.value) || null)}>
+                <option value="">-- Sélectionner --</option>
                 {sortedPersons.map(p => (
-                  <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>
+                  <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>
                 ))}
               </select>
             </div>
@@ -94,7 +95,13 @@ export function AncestorWheelPage() {
         </div>
       </div>
       <div className="w-full h-[720px] border border-base-200 rounded-box bg-base-100 shadow-xl overflow-hidden relative">
-        <AncestorWheel root={root} persons={persons} depth={depth} />
+        {root ? (
+          <AncestorWheel root={root} persons={persons} depth={depth} />
+        ) : (
+          <div className="flex items-center justify-center h-full text-base-content/50">
+            Veuillez sélectionner une personne
+          </div>
+        )}
       </div>
     </div>
   )

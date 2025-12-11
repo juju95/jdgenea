@@ -3,13 +3,13 @@ import * as d3 from 'd3'
 import { buildDescendantHierarchy } from './utils'
 import type { ChartProps, HierarchyNode } from './utils'
 
-export const DescendantWheel: React.FC<ChartProps> = ({ persons, rootId, onSelect, width = 800, height = 600 }) => {
+export const DescendantWheel: React.FC<ChartProps & { maxDepth?: number }> = ({ persons, rootId, onSelect, width = 800, height = 600, maxDepth = 4 }) => {
     const svgRef = useRef<SVGSVGElement>(null)
 
     useEffect(() => {
         if (!svgRef.current || !rootId) return
 
-        const data = buildDescendantHierarchy(persons, rootId, 0, 4) // Limit depth
+        const data = buildDescendantHierarchy(persons, rootId, 0, maxDepth)
         if (!data) return
 
         const svg = d3.select(svgRef.current)
@@ -53,19 +53,139 @@ export const DescendantWheel: React.FC<ChartProps> = ({ persons, rootId, onSelec
 
         // Labels
         g.selectAll("text")
-            .data(root.descendants().filter(d => (d.y0 + d.y1) / 2 * (d.x1 - d.x0) > 10)) // Simple filter
+            .data(root.descendants().filter(d => {
+                if (d.data.isEmpty) return false
+                return true
+            }))
             .enter().append("text")
             .attr("transform", function(d) {
+                if (d.depth === 0) return "translate(0,0)"
+                
                 const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
                 const y = (d.y0 + d.y1) / 2;
-                return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+                
+                // Depth 1 (Parents/Children): Force Horizontal for readability
+                if (d.depth === 1) {
+                     return `rotate(${x - 90}) translate(${y},0) rotate(${-(x - 90)})`;
+                }
+                
+                // Depth 6+: Radial (Standard)
+                if (d.depth >= 6) {
+                    const rotate = x >= 180 ? x - 90 + 180 : x - 90;
+                    return `rotate(${x - 90}) translate(${y},0) rotate(${rotate - (x - 90)})`;
+                }
+
+                // Depth 2-5: Tangential Readable
+                // Top Half (x < 90 or x > 270): Rotate 90 deg relative to radius (Text reads Left-to-Right)
+                // Bottom Half (90 < x < 270): Rotate -90 deg relative to radius (Text reads Left-to-Right, flipped)
+                if (x > 90 && x < 270) {
+                    return `rotate(${x - 90}) translate(${y},0) rotate(-90)`;
+                } else {
+                    return `rotate(${x - 90}) translate(${y},0) rotate(90)`;
+                }
             })
-            .attr("dy", "0.35em")
-            .text(d => d.data.firstName)
-            .style("font-size", "10px")
             .style("text-anchor", "middle")
             .style("pointer-events", "none")
             .style("fill", "#334155")
+            .each(function(d) {
+                const el = d3.select(this)
+                const arcLength = (d.y0 + d.y1) / 2 * (d.x1 - d.x0)
+                const ringThickness = d.y1 - d.y0
+                
+                const lastName = d.data.lastName?.toUpperCase() || "?"
+                const firstName = d.data.firstName?.split(' ')[0] || "?"
+                
+                // Adjust dimensions for Radial vs Horizontal
+                let availableWidth, availableHeight;
+                
+                // Depth 1: Horizontal text
+                if (d.depth === 1) {
+                    // Available width is arc length? No, chord length?
+                    // Horizontal box inside the wedge.
+                    // Approx: arcLength is horizontal width if at top/bottom.
+                    // But if at side (90 deg), arcLength is vertical height.
+                    // Since we force horizontal, we are limited by the wedge width at that radius.
+                    // Wedge width = 2 * r * sin(theta/2).
+                    // Theta = x1 - x0 (radians).
+                    const angle = d.x1 - d.x0;
+                    const r = (d.y0 + d.y1) / 2;
+                    availableWidth = 2 * r * Math.sin(angle / 2);
+                    availableHeight = ringThickness;
+                } else if (d.depth >= 6) {
+                    // Radial text
+                    availableWidth = ringThickness;
+                    availableHeight = arcLength;
+                } else {
+                    // Tangential text
+                    availableWidth = arcLength;
+                    availableHeight = ringThickness;
+                }
+                
+                if (d.depth === 0) {
+                    el.append("tspan")
+                      .text(lastName)
+                      .attr("x", 0)
+                      .attr("dy", "-0.5em")
+                      .style("font-weight", "bold")
+                    el.append("tspan")
+                      .text(firstName)
+                      .attr("x", 0)
+                      .attr("dy", "1.2em")
+                    return;
+                }
+
+                let fontSize = 11;
+                if (d.depth <= 1) {
+                    fontSize = 14; 
+                } else if (d.depth >= 5) {
+                    fontSize = Math.min(10, Math.max(8, ringThickness / 3));
+                } else {
+                    fontSize = Math.min(12, Math.max(9, ringThickness / 2.5));
+                }
+                el.style("font-size", `${fontSize}px`)
+
+                const charWidth = fontSize * 0.65;
+                const maxChars = Math.floor((availableWidth - 4) / charWidth);
+
+                if (availableWidth < 10) {
+                    el.text("");
+                    return;
+                }
+
+                if (d.depth <= 1) {
+                    if (availableHeight > 2.5 * fontSize) {
+                        el.append("tspan")
+                          .text(lastName)
+                          .attr("x", 0)
+                          .attr("dy", "-0.5em")
+                          .style("font-weight", "bold")
+                        el.append("tspan")
+                          .text(firstName)
+                          .attr("x", 0)
+                          .attr("dy", "1.1em")
+                    } else {
+                         el.text(`${lastName} ${firstName}`)
+                           .attr("dy", "0.35em")
+                           .style("font-weight", "bold")
+                    }
+                } else if (d.depth >= 6) {
+                    // Level 6+: Single line
+                    el.text(`${lastName} ${firstName}`)
+                      .attr("dy", "0.35em")
+                      .style("font-weight", "bold")
+                } else {
+                    // Level 2-5: 2 lines, shifted down slightly
+                    el.append("tspan")
+                      .text(lastName)
+                      .attr("x", 0)
+                      .attr("dy", "-0.1em") // Moved down from -0.5em
+                      .style("font-weight", "bold")
+                    el.append("tspan")
+                      .text(firstName)
+                      .attr("x", 0)
+                      .attr("dy", "1.1em")
+                }
+            })
 
     }, [persons, rootId, width, height, onSelect])
 

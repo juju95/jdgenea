@@ -14,6 +14,8 @@ import jsPDF from 'jspdf'
 import { toJpeg } from 'html-to-image'
 import { Layout, Users, Circle, GitFork, Clock } from 'lucide-react'
 
+import { ZoomPanContainer } from '../components/ZoomPanContainer'
+
 type ViewMode = 'standard' | 'fan' | 'wheel' | 'artistic' | 'timeline'
 
 export function TreeEditor() {
@@ -47,6 +49,8 @@ export function TreeEditor() {
   useEffect(()=>{ (async()=>{ try { if (id) { const list = await api<Person[]>(`/persons?treeId=${id}`); setPersons(list); const fam = await api<Array<{id:string,treeId:string,husbandId?:string|null,wifeId?:string|null}>>(`/families?treeId=${id}`); setFamilies(fam) } } catch(e){ if(e instanceof Error) setError(e.message) } })() },[id])
 
   const [centerId, setCenterId] = useState<string|string|undefined>()
+  const [vizRootId, setVizRootId] = useState<string|undefined>() // Pour la navigation locale dans les vues
+  const [vizDepth, setVizDepth] = useState<number>(4)
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [creationMode, setCreationMode] = useState<{
@@ -54,7 +58,17 @@ export function TreeEditor() {
       context: { type: 'father' | 'mother' | 'spouse' | 'child', sourcePerson: Person }
   } | null>(null)
 
+  useEffect(() => {
+    if (viewMode === 'standard') {
+      setScale(0.6)
+    } else if (['fan', 'wheel', 'artistic', 'timeline'].includes(viewMode)) {
+      setScale(1)
+    }
+  }, [viewMode])
+
   useEffect(()=>{ if (tree && tree.rootPersonId) setCenterId(tree.rootPersonId) },[tree])
+  // Réinitialiser la vue locale si la racine principale change
+  useEffect(() => { setVizRootId(undefined) }, [centerId])
 
   const openAddPersonModal = async () => {
       if (!id) return
@@ -320,15 +334,15 @@ export function TreeEditor() {
   }
 
   return (
-    <div className="grid gap-6 h-[calc(100vh-8rem)]">
+    <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">
       {error && (
-        <div role="alert" className="alert alert-error">
+        <div role="alert" className="alert alert-error shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <span>{error}</span>
         </div>
       )}
       
-      <div className="card bg-base-100 shadow-sm border border-base-200">
+      <div className="card bg-base-100 shadow-sm border border-base-200 shrink-0">
         <div className="card-body py-4 flex-row items-center justify-between">
             <div>
                 <h1 className="text-2xl font-bold text-primary">{tree?.name ?? 'Éditeur d\'arbre'}</h1>
@@ -374,15 +388,13 @@ export function TreeEditor() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-[1fr_320px] gap-6 h-full overflow-hidden">
+      <div className="grid md:grid-cols-[1fr_320px] gap-6 flex-1 min-h-0 overflow-hidden">
         <div className="card bg-base-100 shadow-xl border border-base-200 h-full relative flex flex-col overflow-hidden">
             {/* Controls overlay */}
-            {viewMode === 'standard' && (
-                <div className="absolute top-4 right-4 z-10 join join-vertical shadow-sm">
-                    <button className="btn btn-sm btn-circle btn-ghost join-item bg-base-100" onClick={()=>setScale(s=> Math.min(2, s+0.1))}>+</button>
-                    <button className="btn btn-sm btn-circle btn-ghost join-item bg-base-100" onClick={()=>setScale(s=> Math.max(0.5, s-0.1))}>−</button>
-                </div>
-            )}
+            <div className="absolute top-4 right-4 z-[60] join join-vertical shadow-sm">
+                <button className="btn btn-sm btn-circle btn-ghost join-item bg-base-100" onClick={()=>setScale(s=> Math.min(2, s+0.1))}>+</button>
+                <button className="btn btn-sm btn-circle btn-ghost join-item bg-base-100" onClick={()=>setScale(s=> Math.max(0.2, s-0.1))}>−</button>
+            </div>
             
             <div className="w-full h-full flex-1 relative overflow-auto bg-base-200/30">
                 {centerId ? (
@@ -400,29 +412,73 @@ export function TreeEditor() {
                             />
                         )}
                         {viewMode === 'fan' && (
-                            <div className="w-full h-full flex items-center justify-center p-4">
-                                <AncestorFanChart 
-                                    persons={persons}
-                                    rootId={centerId}
-                                    onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
-                                    width={800}
-                                    height={600}
-                                />
+                            <div className="w-full h-full flex flex-col overflow-hidden">
+                                <div className="p-2 border-b border-base-200 bg-base-100/80 backdrop-blur flex items-center gap-2 z-10 shrink-0">
+                                    <span className="text-sm font-semibold text-base-content/70">Personne centrale (Vue) :</span>
+                                    <select 
+                                        className="select select-bordered select-sm max-w-xs" 
+                                        value={vizRootId || centerId || ''} 
+                                        onChange={e=> setVizRootId(e.target.value)}
+                                    >
+                                        <option value="">-- Sélectionner --</option>
+                                        {sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}
+                                    </select>
+                                    <span className="text-sm font-semibold text-base-content/70 ml-4">Niveaux :</span>
+                                    <select 
+                                        className="select select-bordered select-sm w-20" 
+                                        value={vizDepth} 
+                                        onChange={e=> setVizDepth(parseInt(e.target.value))}
+                                    >
+                                        {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+                                    </select>
+                                </div>
+                                <ZoomPanContainer scale={scale} contentWidth={Math.max(800, vizDepth * 160)} contentHeight={Math.max(600, vizDepth * 120)}>
+                                    <AncestorFanChart 
+                                        persons={persons}
+                                        rootId={vizRootId || centerId}
+                                        onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
+                                        width={Math.max(800, vizDepth * 160)}
+                                        height={Math.max(600, vizDepth * 120)}
+                                        maxDepth={vizDepth}
+                                    />
+                                </ZoomPanContainer>
                             </div>
                         )}
                         {viewMode === 'wheel' && (
-                            <div className="w-full h-full flex items-center justify-center p-4">
-                                <DescendantWheel 
-                                    persons={persons}
-                                    rootId={centerId}
-                                    onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
-                                    width={800}
-                                    height={600}
-                                />
+                            <div className="w-full h-full flex flex-col overflow-hidden">
+                                <div className="p-2 border-b border-base-200 bg-base-100/80 backdrop-blur flex items-center gap-2 z-10 shrink-0">
+                                    <span className="text-sm font-semibold text-base-content/70">Personne centrale (Vue) :</span>
+                                    <select 
+                                        className="select select-bordered select-sm max-w-xs" 
+                                        value={vizRootId || centerId || ''} 
+                                        onChange={e=> setVizRootId(e.target.value)}
+                                    >
+                                        <option value="">-- Sélectionner --</option>
+                                        {sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}
+                                    </select>
+                                    <span className="text-sm font-semibold text-base-content/70 ml-4">Niveaux :</span>
+                                    <select 
+                                        className="select select-bordered select-sm w-20" 
+                                        value={vizDepth} 
+                                        onChange={e=> setVizDepth(parseInt(e.target.value))}
+                                    >
+                                        {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+                                    </select>
+                                </div>
+                                <ZoomPanContainer scale={scale} contentWidth={Math.max(800, vizDepth * 160)} contentHeight={Math.max(600, vizDepth * 120)}>
+                                    <DescendantWheel 
+                                        persons={persons}
+                                        rootId={vizRootId || centerId}
+                                        onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
+                                        width={Math.max(800, vizDepth * 160)}
+                                        height={Math.max(600, vizDepth * 120)}
+                                        maxDepth={vizDepth}
+                                    />
+                                </ZoomPanContainer>
                             </div>
                         )}
                         {viewMode === 'artistic' && (
-                            <div className="w-full h-full flex items-center justify-center p-4 bg-[#fdfbf7]">
+                            <ZoomPanContainer scale={scale} contentWidth={800} contentHeight={600} className="bg-[#fdfbf7]">
                                 <TreeArtistic 
                                     persons={persons}
                                     rootId={centerId}
@@ -430,7 +486,7 @@ export function TreeEditor() {
                                     width={800}
                                     height={600}
                                 />
-                            </div>
+                            </ZoomPanContainer>
                         )}
                         {viewMode === 'timeline' && (
                             <div className="w-full h-full p-4">
@@ -459,7 +515,7 @@ export function TreeEditor() {
               <div className="form-control w-full">
                 <select className="select select-bordered select-sm w-full" value={centerId || ''} onChange={e=> setCenterId(e.target.value)}>
                   <option value="">-- Personne centrale --</option>
-                  {sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName} {p.gedcomId ? `(GED ${p.gedcomId})` : ''}</option>)}
+                  {sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''} {p.gedcomId ? `(GED ${p.gedcomId})` : ''}</option>)}
                 </select>
               </div>
               <button className="btn btn-sm btn-primary w-full text-white" onClick={async()=>{ if (!id || !centerId) return; await api(`/trees/${id}`, { method:'PATCH', body: JSON.stringify({ rootPersonId: centerId }) }); }}>Définir comme racine</button>
@@ -475,9 +531,9 @@ export function TreeEditor() {
                 </div>
                 <div className="collapse-content">
                   <div className="grid gap-2 pt-2">
-                    <select id="child" className="select select-bordered select-xs w-full">{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
-                    <select id="father" className="select select-bordered select-xs w-full"><option value="">(Père optionnel)</option>{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
-                    <select id="mother" className="select select-bordered select-xs w-full"><option value="">(Mère optionnel)</option>{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
+                    <select id="child" className="select select-bordered select-xs w-full">{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}</select>
+                    <select id="father" className="select select-bordered select-xs w-full"><option value="">(Père optionnel)</option>{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}</select>
+                    <select id="mother" className="select select-bordered select-xs w-full"><option value="">(Mère optionnel)</option>{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}</select>
                     <button className="btn btn-xs btn-success text-white w-full" onClick={async()=>{ const child=(document.getElementById('child') as HTMLSelectElement).value; const father=(document.getElementById('father') as HTMLSelectElement).value || null; const mother=(document.getElementById('mother') as HTMLSelectElement).value || null; await api(`/persons/${child}`, { method:'PATCH', body: JSON.stringify({ fatherId: father, motherId: mother }) }); setPersons(prev=> prev.map(p=> p.id===child ? { ...p, fatherId: father, motherId: mother } : p)) }}>Enregistrer</button>
                   </div>
                 </div>
@@ -707,7 +763,7 @@ export function TreeEditor() {
               <label className="label">
                 <span className="label-text">Personne concernée</span>
               </label>
-              <select id="eventPerson" className="select select-bordered w-full">{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName} {p.firstName}</option>)}</select>
+              <select id="eventPerson" className="select select-bordered w-full">{sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}</select>
             </div>
             <div className="form-control">
               <label className="label">
