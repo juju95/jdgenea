@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import { buildAncestorHierarchy } from './utils'
 import type { ChartProps, HierarchyNode } from './utils'
 
-export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number }> = ({ persons, rootId, onSelect, width = 800, height = 600, maxDepth = 5 }) => {
+export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number, scale?: number }> = ({ persons, rootId, onSelect, width = 800, height = 600, maxDepth = 5, scale = 1 }) => {
     const svgRef = useRef<SVGSVGElement>(null)
 
     useEffect(() => {
@@ -123,6 +123,17 @@ export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number }> = ({
                     availableHeight = ringThickness;
                 }
                 
+                // Helper for dates
+                const getYears = (p: any) => {
+                    const b = p.birthDateOriginal || (p.birthDate ? p.birthDate.substring(0, 4) : '');
+                    const dea = p.deathDateOriginal || (p.deathDate ? p.deathDate.substring(0, 4) : '');
+                    if (!b && !dea) return '';
+                    if (b && !dea) return `° ${b}`;
+                    if (!b && dea) return `† ${dea}`;
+                    return `${b} - ${dea}`;
+                }
+                const dateStr = getYears(d.data);
+
                 if (d.depth === 0) {
                     // Root: Special case, circular area
                      el.append("tspan")
@@ -134,6 +145,14 @@ export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number }> = ({
                        .text(firstName)
                        .attr("x", 0)
                        .attr("dy", "1.2em")
+                     if (dateStr) {
+                         el.append("tspan")
+                           .text(dateStr)
+                           .attr("x", 0)
+                           .attr("dy", "1.2em")
+                           .style("font-size", "0.8em")
+                           .style("fill", "#666")
+                     }
                      return;
                 }
 
@@ -155,6 +174,12 @@ export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number }> = ({
                 } else {
                     fontSize = Math.min(12, Math.max(9, ringThickness / 2.5));
                 }
+
+                // Adjust for zoom: keep visual size constant when zooming in
+                if (scale > 1) {
+                    fontSize = fontSize / scale;
+                }
+
                 el.style("font-size", `${fontSize}px`)
 
                 const charWidth = fontSize * 0.65;
@@ -166,18 +191,26 @@ export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number }> = ({
                 }
 
                 if (d.depth <= 1) {
-                    if (availableHeight > 2.5 * fontSize) {
+                    if (availableHeight > 3.5 * fontSize) {
                         el.append("tspan")
                           .text(lastName)
                           .attr("x", 0)
-                          .attr("dy", "-0.5em")
+                          .attr("dy", "-0.8em")
                           .style("font-weight", "bold")
                         el.append("tspan")
                           .text(firstName)
                           .attr("x", 0)
-                          .attr("dy", "1.1em")
+                          .attr("dy", "1.2em")
+                        if (dateStr) {
+                             el.append("tspan")
+                               .text(dateStr)
+                               .attr("x", 0)
+                               .attr("dy", "1.2em")
+                               .style("font-size", "0.85em")
+                               .style("fill", "#555")
+                        }
                     } else {
-                        // Single line
+                        // Single line or just Name
                          el.text(`${lastName} ${firstName}`)
                            .attr("dy", "0.35em")
                            .style("font-weight", "bold")
@@ -188,16 +221,27 @@ export const AncestorFanChart: React.FC<ChartProps & { maxDepth?: number }> = ({
                       .attr("dy", "0.35em")
                       .style("font-weight", "bold")
                 } else {
-                    // Level 2-5: 2 lines, shifted down slightly
+                    // Level 2-5: 2 lines (Name), maybe 3rd for date if space
+                    const showDate = availableHeight > 2.8 * fontSize;
+                    
                     el.append("tspan")
                       .text(lastName)
                       .attr("x", 0)
-                      .attr("dy", "-0.1em") // Moved down from -0.5em
+                      .attr("dy", showDate ? "-0.6em" : "-0.5em")
                       .style("font-weight", "bold")
                     el.append("tspan")
                       .text(firstName)
                       .attr("x", 0)
                       .attr("dy", "1.1em")
+                      
+                    if (showDate && dateStr) {
+                        el.append("tspan")
+                          .text(dateStr)
+                          .attr("x", 0)
+                          .attr("dy", "1.1em")
+                          .style("font-size", "0.85em")
+                          .style("fill", "#555")
+                    }
                 }
             })
 

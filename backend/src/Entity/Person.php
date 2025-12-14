@@ -31,17 +31,26 @@ class Person
     #[ORM\Column(type: 'date_immutable', nullable: true)]
     private ?\DateTimeInterface $birthDate = null;
 
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
+    private ?string $birthDateOriginal = null;
+
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $birthPlace = null;
 
     #[ORM\Column(type: 'date_immutable', nullable: true)]
     private ?\DateTimeInterface $baptismDate = null;
 
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
+    private ?string $baptismDateOriginal = null;
+
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $baptismPlace = null;
 
     #[ORM\Column(type: 'date_immutable', nullable: true)]
     private ?\DateTimeInterface $deathDate = null;
+
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
+    private ?string $deathDateOriginal = null;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $deathPlace = null;
@@ -195,4 +204,11 @@ class Person
     public function setGedcomId(?string $v): void { $this->gedcomId = $v; }
     public function getSosa(): ?string { return $this->sosa; }
     public function setSosa(?string $v): void { $this->sosa = $v; }
+
+    public function getBirthDateOriginal(): ?string { return $this->birthDateOriginal; }
+    public function setBirthDateOriginal(?string $v): void { $this->birthDateOriginal = $v; }
+    public function getDeathDateOriginal(): ?string { return $this->deathDateOriginal; }
+    public function setDeathDateOriginal(?string $v): void { $this->deathDateOriginal = $v; }
+    public function getBaptismDateOriginal(): ?string { return $this->baptismDateOriginal; }
+    public function setBaptismDateOriginal(?string $v): void { $this->baptismDateOriginal = $v; }
 }

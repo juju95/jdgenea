@@ -8,6 +8,7 @@ import { toFamilyTreeNodes } from '../utils/familyTreeData'
 import { AncestorFanChart } from '../components/visualizations/AncestorFanChart'
 import { DescendantWheel } from '../components/visualizations/DescendantWheel'
 import { TreeArtistic } from '../components/visualizations/TreeArtistic'
+import type { ArtisticStyle } from '../components/visualizations/TreeArtistic'
 import { TimelineChart } from '../components/visualizations/TimelineChart'
 import type { Person } from '../types/person'
 import jsPDF from 'jspdf'
@@ -51,6 +52,7 @@ export function TreeEditor() {
   const [centerId, setCenterId] = useState<string|string|undefined>()
   const [vizRootId, setVizRootId] = useState<string|undefined>() // Pour la navigation locale dans les vues
   const [vizDepth, setVizDepth] = useState<number>(4)
+  const [artisticStyle, setArtisticStyle] = useState<ArtisticStyle>('botanical')
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [creationMode, setCreationMode] = useState<{
@@ -142,60 +144,87 @@ export function TreeEditor() {
         // Measure actual content size to avoid capturing empty space
         let maxRight = 0
         let maxBottom = 0
-        
-        // We need to check child nodes because scrollHeight might include padding/margins
-        // or be affected by the scaling container size.
-        // The structure is: Wrapper > ScaledDiv > Nodes (absolute)
-        // We are capturing 'element', which is the Wrapper (with ref=treeRef).
-        // Actually, in FamilyTree.tsx, ref is passed to containerRef (the inner scaled div) or localRef?
-        // Let's check FamilyTree.tsx:
-        // export const FamilyTree = memo(forwardRef<HTMLDivElement, Props>(function FamilyTree(..., ref) {
-        //   const localRef = useRef<HTMLDivElement>(null)
-        //   const containerRef = (ref as React.RefObject<HTMLDivElement>) || localRef
-        //   ...
-        //   return (
-        //     <div ...> 
-        //       <div ...>
-        //         <div ref={containerRef} style={{ transform: scale... }}> ... </div>
-        //       </div>
-        //     </div>
-        //   )
-        // }))
-        // So treeRef.current IS the inner div with the transform.
-        
-        // If we capture the inner div, 'toJpeg' captures it at its unscaled size (CSS size).
-        // The nodes are absolutely positioned inside it.
-        // We can find the max bottom/right of the nodes.
-        const nodeElements = element.querySelectorAll('[id^="node-"]')
-        if (nodeElements.length > 0) {
-            nodeElements.forEach(el => {
-                // We can't trust getBoundingClientRect() directly for position relative to container
-                // because of the transform on the container itself.
-                // However, the nodes use style={{ transform: translate(x, y) }}
-                // We can parse that or use offsetTop/Left if they were standard.
-                // Since they are absolute, we can try to parse the transform.
-                // Or easier: use the bounding rect of the node and the bounding rect of the container.
-                const rect = el.getBoundingClientRect()
-                const containerRect = element.getBoundingClientRect()
-                
-                // Relative position inside the container (taking into account the scale of the container)
-                // The container is scaled. The rects are screen coordinates.
-                // We want the VISUAL dimensions for the capture, because html-to-image captures the element with its transform.
-                // If we divide by scale, we get logical dimensions (e.g. 2000px) while the element is visually 1000px.
-                // Capturing with width=2000px when content is 1000px results in 50% whitespace.
-                const relativeBottom = (rect.bottom - containerRect.top)
-                const relativeRight = (rect.right - containerRect.left)
-                
-                if (relativeBottom > maxBottom) maxBottom = relativeBottom
-                if (relativeRight > maxRight) maxRight = relativeRight
-            })
+
+        if (viewMode === 'standard') {
+            // We need to check child nodes because scrollHeight might include padding/margins
+            // or be affected by the scaling container size.
+            // The structure is: Wrapper > ScaledDiv > Nodes (absolute)
+            // We are capturing 'element', which is the Wrapper (with ref=treeRef).
+            // Actually, in FamilyTree.tsx, ref is passed to containerRef (the inner scaled div) or localRef?
+            // Let's check FamilyTree.tsx:
+            // export const FamilyTree = memo(forwardRef<HTMLDivElement, Props>(function FamilyTree(..., ref) {
+            //   const localRef = useRef<HTMLDivElement>(null)
+            //   const containerRef = (ref as React.RefObject<HTMLDivElement>) || localRef
+            //   ...
+            //   return (
+            //     <div ...> 
+            //       <div ...>
+            //         <div ref={containerRef} style={{ transform: scale... }}> ... </div>
+            //       </div>
+            //     </div>
+            //   )
+            // }))
+            // So treeRef.current IS the inner div with the transform.
             
-            // No padding to avoid empty pages
-            // We want to crop exactly at the bottom of the lowest node
+            // If we capture the inner div, 'toJpeg' captures it at its unscaled size (CSS size).
+            // The nodes are absolutely positioned inside it.
+            // We can find the max bottom/right of the nodes.
+            const nodeElements = element.querySelectorAll('[id^="node-"]')
+            if (nodeElements.length > 0) {
+                nodeElements.forEach(el => {
+                    // We can't trust getBoundingClientRect() directly for position relative to container
+                    // because of the transform on the container itself.
+                    // However, the nodes use style={{ transform: translate(x, y) }}
+                    // We can parse that or use offsetTop/Left if they were standard.
+                    // Since they are absolute, we can try to parse the transform.
+                    // Or easier: use the bounding rect of the node and the bounding rect of the container.
+                    const rect = el.getBoundingClientRect()
+                    const containerRect = element.getBoundingClientRect()
+                    
+                    // Relative position inside the container (taking into account the scale of the container)
+                    // The container is scaled. The rects are screen coordinates.
+                    // We want the VISUAL dimensions for the capture, because html-to-image captures the element with its transform.
+                    // If we divide by scale, we get logical dimensions (e.g. 2000px) while the element is visually 1000px.
+                    // Capturing with width=2000px when content is 1000px results in 50% whitespace.
+                    const relativeBottom = (rect.bottom - containerRect.top)
+                    const relativeRight = (rect.right - containerRect.left)
+                    
+                    if (relativeBottom > maxBottom) maxBottom = relativeBottom
+                    if (relativeRight > maxRight) maxRight = relativeRight
+                })
+                
+                // No padding to avoid empty pages
+                // We want to crop exactly at the bottom of the lowest node
+            } else {
+                // Fallback
+                maxRight = element.scrollWidth
+                maxBottom = element.scrollHeight
+            }
         } else {
-            // Fallback
-            maxRight = element.scrollWidth
-            maxBottom = element.scrollHeight
+            // For SVG/Wheel views, we simply take the scaled size
+            // The element is the inner div of ZoomPanContainer which has transform scale applied
+            // Its bounding rect gives the visual size on screen
+            const rect = element.getBoundingClientRect()
+            
+            // Since html-to-image captures the element with its transform, 
+            // we should use the visual size (width * scale) which getBoundingClientRect reflects
+            // However, getBoundingClientRect includes the position on page. 
+            // We just want dimensions.
+            
+            // For ZoomPanContainer, the inner div has explicit width/height styles (unscaled) 
+            // and a transform: scale().
+            // toJpeg(element) will capture it with the transform.
+            // So we need to provide the SCALED dimensions to toJpeg width/height options
+            // to ensure the canvas is large enough.
+            
+            // Actually, checking ZoomPanContainer:
+            // <div style={{ width: contentWidth, height: contentHeight, transform: scale... }}>
+            
+            // If we use element.offsetWidth, it gives the unscaled width.
+            // But we want the visual width.
+            
+            maxRight = element.offsetWidth * config.scale
+            maxBottom = element.offsetHeight * config.scale
         }
 
         // Quality settings
@@ -432,7 +461,12 @@ export function TreeEditor() {
                                         {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
                                     </select>
                                 </div>
-                                <ZoomPanContainer scale={scale} contentWidth={Math.max(800, vizDepth * 160)} contentHeight={Math.max(600, vizDepth * 120)}>
+                                <ZoomPanContainer 
+                                    scale={scale} 
+                                    contentWidth={Math.max(800, vizDepth * 160)} 
+                                    contentHeight={Math.max(600, vizDepth * 120)}
+                                    contentRef={treeRef}
+                                >
                                     <AncestorFanChart 
                                         persons={persons}
                                         rootId={vizRootId || centerId}
@@ -440,6 +474,7 @@ export function TreeEditor() {
                                         width={Math.max(800, vizDepth * 160)}
                                         height={Math.max(600, vizDepth * 120)}
                                         maxDepth={vizDepth}
+                                        scale={scale}
                                     />
                                 </ZoomPanContainer>
                             </div>
@@ -465,7 +500,12 @@ export function TreeEditor() {
                                         {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
                                     </select>
                                 </div>
-                                <ZoomPanContainer scale={scale} contentWidth={Math.max(800, vizDepth * 160)} contentHeight={Math.max(600, vizDepth * 120)}>
+                                <ZoomPanContainer 
+                                    scale={scale} 
+                                    contentWidth={Math.max(800, vizDepth * 160)} 
+                                    contentHeight={Math.max(600, vizDepth * 120)}
+                                    contentRef={treeRef}
+                                >
                                     <DescendantWheel 
                                         persons={persons}
                                         rootId={vizRootId || centerId}
@@ -473,29 +513,63 @@ export function TreeEditor() {
                                         width={Math.max(800, vizDepth * 160)}
                                         height={Math.max(600, vizDepth * 120)}
                                         maxDepth={vizDepth}
+                                        scale={scale}
                                     />
                                 </ZoomPanContainer>
                             </div>
                         )}
                         {viewMode === 'artistic' && (
-                            <ZoomPanContainer scale={scale} contentWidth={800} contentHeight={600} className="bg-[#fdfbf7]">
-                                <TreeArtistic 
-                                    persons={persons}
-                                    rootId={centerId}
-                                    onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
-                                    width={800}
-                                    height={600}
-                                />
-                            </ZoomPanContainer>
+                            <div className="w-full h-full flex flex-col overflow-hidden">
+                                <div className="p-2 border-b border-base-200 bg-base-100/80 backdrop-blur flex items-center gap-2 z-10 shrink-0">
+                                    <span className="text-sm font-semibold text-base-content/70">Style :</span>
+                                    <select 
+                                        className="select select-bordered select-sm w-48" 
+                                        value={artisticStyle} 
+                                        onChange={e=> setArtisticStyle(e.target.value as ArtisticStyle)}
+                                    >
+                                        <option value="botanical">Arbre Botanique</option>
+                                        <option value="radial">Arbre Rayonnant</option>
+                                        <option value="horizontal">Arbre Horizontal</option>
+                                    </select>
+                                    
+                                    <span className="text-sm font-semibold text-base-content/70 ml-4">Personne centrale (Vue) :</span>
+                                    <select 
+                                        className="select select-bordered select-sm max-w-xs" 
+                                        value={vizRootId || centerId || ''} 
+                                        onChange={e=> setVizRootId(e.target.value)}
+                                    >
+                                        <option value="">-- Sélectionner --</option>
+                                        {sortedPersons.map(p=> <option key={p.id} value={p.id}>{p.lastName?.toUpperCase()} {p.firstName} {p.sosa ? `(SOSA ${p.sosa})` : ''}</option>)}
+                                    </select>
+                                </div>
+                                <ZoomPanContainer 
+                                    scale={scale} 
+                                    contentWidth={1200} 
+                                    contentHeight={900} 
+                                    className="bg-[#fdfbf7]"
+                                    contentRef={treeRef}
+                                >
+                                    <TreeArtistic 
+                                        persons={persons}
+                                        rootId={vizRootId || centerId}
+                                        onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
+                                        width={1200}
+                                        height={900}
+                                        style={artisticStyle}
+                                    />
+                                </ZoomPanContainer>
+                            </div>
                         )}
                         {viewMode === 'timeline' && (
-                            <div className="w-full h-full p-4">
+                            <div className="w-full h-full flex flex-col overflow-hidden">
                                 <TimelineChart 
                                     persons={persons}
                                     rootId={centerId}
                                     onSelect={(id) => { setSelectedPersonId(id); setIsEditorOpen(true); }}
                                     width={1200}
                                     livingThreshold={tree?.livingThreshold}
+                                    scale={scale}
+                                    contentRef={treeRef}
                                 />
                             </div>
                         )}

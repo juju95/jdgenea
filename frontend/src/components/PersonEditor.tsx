@@ -171,16 +171,19 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                 maidenName: data.maidenName,
                 gender: data.gender,
                 birthDate: data.birthDate,
+                birthDateOriginal: data.birthDateOriginal,
                 birthTime: data.birthTime,
                 birthPlace: data.birthPlace,
                 birthLatitude: data.birthLatitude,
                 birthLongitude: data.birthLongitude,
                 baptismDate: data.baptismDate,
+                baptismDateOriginal: data.baptismDateOriginal,
                 baptismTime: data.baptismTime,
                 baptismPlace: data.baptismPlace,
                 baptismLatitude: data.baptismLatitude,
                 baptismLongitude: data.baptismLongitude,
                 deathDate: data.deathDate,
+                deathDateOriginal: data.deathDateOriginal,
                 deathTime: data.deathTime,
                 deathPlace: data.deathPlace,
                 deathLatitude: data.deathLatitude,
@@ -637,6 +640,15 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     value={formData.birthDate || ''}
                     onChange={e => handleChange('birthDate', e.target.value)}
                   />
+                  <label className="label py-0 pt-1">
+                    <span className="label-text-alt text-base-content/60">Texte original</span>
+                  </label>
+                  <input 
+                    className="input input-bordered input-sm w-full"
+                    value={formData.birthDateOriginal || ''}
+                    onChange={e => handleChange('birthDateOriginal', e.target.value)}
+                    placeholder="Ex: Vers 1750"
+                  />
                 </div>
                 <div className="form-control">
                   <label className="label">
@@ -712,6 +724,15 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                     className="input input-bordered w-full"
                     value={formData.baptismDate || ''}
                     onChange={e => handleChange('baptismDate', e.target.value)}
+                  />
+                  <label className="label py-0 pt-1">
+                    <span className="label-text-alt text-base-content/60">Texte original</span>
+                  </label>
+                  <input 
+                    className="input input-bordered input-sm w-full"
+                    value={formData.baptismDateOriginal || ''}
+                    onChange={e => handleChange('baptismDateOriginal', e.target.value)}
+                    placeholder="Ex: Vers 1750"
                   />
                 </div>
                 <div className="form-control">
@@ -852,6 +873,15 @@ export function PersonEditor({ personId, onClose, onUpdate, onPersonCreated, onS
                       className="input input-bordered w-full"
                       value={formData.deathDate || ''}
                       onChange={e => handleChange('deathDate', e.target.value)}
+                    />
+                    <label className="label py-0 pt-1">
+                      <span className="label-text-alt text-base-content/60">Texte original</span>
+                    </label>
+                    <input 
+                      className="input input-bordered input-sm w-full"
+                      value={formData.deathDateOriginal || ''}
+                      onChange={e => handleChange('deathDateOriginal', e.target.value)}
+                      placeholder="Ex: Vers 1750"
                     />
                   </div>
                   <div className="form-control">

@@ -160,16 +160,19 @@ class PersonController
             'fatherId' => self::get($p, 'fatherId'),
             'motherId' => self::get($p, 'motherId'),
             'birthDate' => self::formatDate(self::get($p, 'birthDate')),
+            'birthDateOriginal' => self::get($p, 'birthDateOriginal'),
             'birthTime' => self::formatTime(self::get($p, 'birthTime')),
             'birthPlace' => self::get($p, 'birthPlace'),
             'birthLatitude' => self::get($p, 'birthLatitude'),
             'birthLongitude' => self::get($p, 'birthLongitude'),
             'baptismDate' => self::formatDate(self::get($p, 'baptismDate')),
+            'baptismDateOriginal' => self::get($p, 'baptismDateOriginal'),
             'baptismTime' => self::formatTime(self::get($p, 'baptismTime')),
             'baptismPlace' => self::get($p, 'baptismPlace'),
             'baptismLatitude' => self::get($p, 'baptismLatitude'),
             'baptismLongitude' => self::get($p, 'baptismLongitude'),
             'deathDate' => self::formatDate(self::get($p, 'deathDate')),
+            'deathDateOriginal' => self::get($p, 'deathDateOriginal'),
             'deathTime' => self::formatTime(self::get($p, 'deathTime')),
             'deathPlace' => self::get($p, 'deathPlace'),
             'deathLatitude' => self::get($p, 'deathLatitude'),
@@ -199,7 +202,7 @@ class PersonController
 
     private function hydratePerson(Person $p, array $data): void
     {
-        foreach (['firstName','middleName','lastName','maidenName','gender','fatherId','motherId','birthPlace','deathPlace','occupation','isLiving','notes','biography','posX','posY','birthLatitude','birthLongitude','deathLatitude','deathLongitude','baptismPlace','baptismLatitude','baptismLongitude','gedcomId'] as $field) {
+        foreach (['firstName','middleName','lastName','maidenName','gender','fatherId','motherId','birthPlace','deathPlace','occupation','isLiving','notes','biography','posX','posY','birthLatitude','birthLongitude','deathLatitude','deathLongitude','baptismPlace','baptismLatitude','baptismLongitude','gedcomId','birthDateOriginal','baptismDateOriginal','deathDateOriginal'] as $field) {
             if (isset($data[$field])) {
                 self::set($p, $field, $data[$field]);
             }

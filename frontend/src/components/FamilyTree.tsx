@@ -215,8 +215,13 @@ const FamilyNodeComponent = ({ node, onSelect, isRoot, style, livingThreshold }:
           <span className="uppercase">{data.lastName}</span> {data.firstName}
         </div>
         <div className="text-xs text-slate-500 mt-1 flex gap-2">
-          {data.birthDate && <span>° {new Date(data.birthDate).getFullYear()}</span>}
-          {data.deathDate && <span>† {new Date(data.deathDate).getFullYear()}</span>}
+          {/* Display original date if available, otherwise year from ISO date */}
+          {(data.birthDateOriginal || data.birthDate) && (
+             <span>° {data.birthDateOriginal || (data.birthDate ? new Date(data.birthDate).getFullYear() : '')}</span>
+          )}
+          {(data.deathDateOriginal || data.deathDate) && (
+             <span>† {data.deathDateOriginal || (data.deathDate ? new Date(data.deathDate).getFullYear() : '')}</span>
+          )}
         </div>
         <div className={`absolute bottom-2 right-3 text-[10px] font-bold px-1.5 py-0.5 rounded ${node.gender === 'female' ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
           {node.gender === 'female' ? 'F' : 'M'}

@@ -22,6 +22,9 @@ class Event
     #[ORM\Column(type: 'date', nullable: true)]
     private ?\DateTimeInterface $date = null;
 
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
+    private ?string $dateOriginal = null;
+
     #[ORM\Column(type: 'string', length: 10, nullable: true)]
     private ?string $time = null; // HH:mm
 
@@ -51,6 +54,8 @@ class Event
     public function getType(): string { return $this->type; }
     public function getDate(): ?\DateTimeInterface { return $this->date; }
     public function setDate(?\DateTimeInterface $d): void { $this->date = $d; }
+    public function getDateOriginal(): ?string { return $this->dateOriginal; }
+    public function setDateOriginal(?string $d): void { $this->dateOriginal = $d; }
     public function getTime(): ?string { return $this->time; }
     public function setTime(?string $t): void { $this->time = $t; }
     public function getPlace(): ?string { return $this->place; }

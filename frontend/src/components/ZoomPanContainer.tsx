@@ -6,9 +6,10 @@ interface Props {
     className?: string
     contentWidth?: number
     contentHeight?: number
+    contentRef?: React.Ref<HTMLDivElement>
 }
 
-export function ZoomPanContainer({ children, scale, className = '', contentWidth, contentHeight }: Props) {
+export function ZoomPanContainer({ children, scale, className = '', contentWidth, contentHeight, contentRef }: Props) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [isDragging, setIsDragging] = useState(false)
     const [startPos, setStartPos] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
@@ -62,7 +63,9 @@ export function ZoomPanContainer({ children, scale, className = '', contentWidth
                     flexShrink: 0
                 }}
             >
-                <div style={{ 
+                <div 
+                ref={contentRef}
+                style={{ 
                     width: contentWidth, 
                     height: contentHeight, 
                     transform: `scale(${scale})`, 

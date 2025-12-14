@@ -9,16 +9,19 @@ export interface Person {
   fatherId?: string | null
   motherId?: string | null
   birthDate?: string
+  birthDateOriginal?: string
   birthTime?: string
   birthPlace?: string
   birthLatitude?: string
   birthLongitude?: string
   baptismDate?: string
+  baptismDateOriginal?: string
   baptismTime?: string
   baptismPlace?: string
   baptismLatitude?: string
   baptismLongitude?: string
   deathDate?: string
+  deathDateOriginal?: string
   deathTime?: string
   deathPlace?: string
   deathLatitude?: string

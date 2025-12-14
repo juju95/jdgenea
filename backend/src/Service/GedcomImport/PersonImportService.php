@@ -42,6 +42,8 @@ class PersonImportService
             // Events
             $this->parseEvent($person, $data['children'], 'BIRT', 'birth');
             $this->parseEvent($person, $data['children'], 'DEAT', 'death');
+            $this->parseEvent($person, $data['children'], 'BAPM', 'baptism');
+            $this->parseEvent($person, $data['children'], 'CHR', 'baptism');
 
             // Occupation
             $occu = $this->findTagValue($data['children'], 'OCCU');
@@ -143,6 +145,9 @@ class PersonImportService
                 } elseif ($type === 'death') {
                     $person->setDeathLatitude($latVal);
                     $person->setDeathLongitude($longVal);
+                } elseif ($type === 'baptism') {
+                    $person->setBaptismLatitude($latVal);
+                    $person->setBaptismLongitude($longVal);
                 }
             }
         }
@@ -150,11 +155,18 @@ class PersonImportService
         if ($type === 'birth') {
              if ($placeStr) $person->setBirthPlace($placeStr);
              if ($date) $person->setBirthDate($date);
+             if ($dateStr) $person->setBirthDateOriginal($dateStr);
              if ($time) $person->setBirthTime($time);
         } elseif ($type === 'death') {
              if ($placeStr) $person->setDeathPlace($placeStr);
              if ($date) $person->setDeathDate($date);
+             if ($dateStr) $person->setDeathDateOriginal($dateStr);
              if ($time) $person->setDeathTime($time);
+        } elseif ($type === 'baptism') {
+             if ($placeStr) $person->setBaptismPlace($placeStr);
+             if ($date) $person->setBaptismDate($date);
+             if ($dateStr) $person->setBaptismDateOriginal($dateStr);
+             if ($time) $person->setBaptismTime($time);
         }
     }
 
